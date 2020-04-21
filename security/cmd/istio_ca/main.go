@@ -392,9 +392,11 @@ func runCA() {
 
 		// The CA API uses cert with the max workload cert TTL.
 		hostnames := append(strings.Split(opts.grpcHosts, ","), fqdn())
+		// The istio_ca command is removed in later versions of Istio, so we don't
+		// care about what the clusterID is here
 		caServer, startErr := caserver.New(ca, opts.maxWorkloadCertTTL,
 			opts.signCACerts, hostnames, opts.grpcPort, spiffe.GetTrustDomain(),
-			opts.sdsEnabled, opts.jwtPolicy)
+			opts.sdsEnabled, opts.jwtPolicy, "")
 		if startErr != nil {
 			fatalf("Failed to create istio ca server: %v", startErr)
 		}
