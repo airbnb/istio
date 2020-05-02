@@ -56,9 +56,8 @@ const (
 
 	// Prefixes of V2 metrics.
 	// "reporter" prefix is for istio standard metrics.
-	// "component" suffix is for istio_build metric.
-	v2Prefixes = "reporter=,"
-	v2Suffix   = ",component"
+	// "component" prefix is for istio_build metric.
+	v2Prefixes = "reporter=,component,"
 )
 
 var (

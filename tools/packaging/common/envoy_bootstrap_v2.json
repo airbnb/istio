@@ -4,19 +4,13 @@
     "cluster": "{{ .cluster }}",
     "locality": {
       {{- if .region }}
-      "region": "{{ .region }}"
+      "region": "{{ .region }}",
       {{- end }}
       {{- if .zone }}
-      {{- if .region }}
-      ,
-      {{- end }}
-      "zone": "{{ .zone }}"
+      "zone": "{{ .zone }}",
       {{- end }}
       {{- if .sub_zone }}
-      {{- if or .region .zone }}
-      ,
-      {{- end }}
-      "sub_zone": "{{ .sub_zone }}"
+      "sub_zone": "{{ .sub_zone }}",
       {{- end }}
     },
     "metadata": {{ .meta_json_str }}
@@ -193,6 +187,9 @@
           {
           "prefix": "reporter="
           },
+          {
+          "prefix": "component"
+          },
           {{- range $a, $s := .inclusionPrefix }}
           {
           "prefix": "{{$s}}"
@@ -208,9 +205,6 @@
           "regex": "{{js $s}}"
           },
           {{- end }}
-          {
-          "prefix": "component"
-          }
         ]
       }
     }
@@ -712,7 +706,7 @@
           "socket_address": {{ .statsd }}
         }
       }
-    }
+    },
     {{ end }}
   ]
   {{ end }}
