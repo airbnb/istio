@@ -28,7 +28,6 @@ import (
 	"istio.io/istio/pkg/config/constants"
 	"istio.io/istio/pkg/config/host"
 	"istio.io/istio/pkg/config/protocol"
-	"istio.io/istio/pkg/spiffe"
 )
 
 var GlobalTime = time.Now()
@@ -419,15 +418,6 @@ const (
 	PlainText
 )
 
-// nolint: unparam
-func makeInstanceWithServiceAccount(cfg *model.Config, address string, port int,
-	svcPort *networking.Port, svcLabels map[string]string, serviceAccount string) *model.ServiceInstance {
-	i := makeInstance(cfg, address, port, svcPort, svcLabels, MTLSUnlabelled)
-	i.Endpoint.ServiceAccount = spiffe.MustGenSpiffeURI(i.Service.Attributes.Namespace, serviceAccount)
-	return i
-}
-
-// nolint: unparam
 func makeInstance(cfg *model.Config, address string, port int,
 	svcPort *networking.Port, svcLabels map[string]string, mtlsMode MTLSMode) *model.ServiceInstance {
 	services := convertServices(*cfg)
@@ -679,8 +669,8 @@ func TestConvertWorkloadInstances(t *testing.T) {
 			},
 			se: selector,
 			out: []*model.ServiceInstance{
-				makeInstanceWithServiceAccount(selector, "1.1.1.1", 444, selector.Spec.(*networking.ServiceEntry).Ports[0], labels, "default"),
-				makeInstanceWithServiceAccount(selector, "1.1.1.1", 445, selector.Spec.(*networking.ServiceEntry).Ports[1], labels, "default"),
+				makeInstance(selector, "1.1.1.1", 444, selector.Spec.(*networking.ServiceEntry).Ports[0], labels, MTLSUnlabelled),
+				makeInstance(selector, "1.1.1.1", 445, selector.Spec.(*networking.ServiceEntry).Ports[1], labels, MTLSUnlabelled),
 			},
 		},
 		{

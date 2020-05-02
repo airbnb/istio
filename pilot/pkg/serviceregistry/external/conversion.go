@@ -26,7 +26,6 @@ import (
 	"istio.io/istio/pkg/config/host"
 	"istio.io/istio/pkg/config/protocol"
 	"istio.io/istio/pkg/config/visibility"
-	"istio.io/istio/pkg/spiffe"
 )
 
 func convertPort(port *networking.Port) *model.Port {
@@ -89,7 +88,6 @@ func convertServices(cfg model.Config) []*model.Service {
 							Namespace:       cfg.Namespace,
 							ExportTo:        exportTo,
 						},
-						ServiceAccounts: serviceEntry.SubjectAltNames,
 					})
 				} else if net.ParseIP(address) != nil {
 					out = append(out, &model.Service{
@@ -105,7 +103,6 @@ func convertServices(cfg model.Config) []*model.Service {
 							Namespace:       cfg.Namespace,
 							ExportTo:        exportTo,
 						},
-						ServiceAccounts: serviceEntry.SubjectAltNames,
 					})
 				}
 			}
@@ -123,7 +120,6 @@ func convertServices(cfg model.Config) []*model.Service {
 					Namespace:       cfg.Namespace,
 					ExportTo:        exportTo,
 				},
-				ServiceAccounts: serviceEntry.SubjectAltNames,
 			})
 		}
 	}
@@ -145,10 +141,6 @@ func convertEndpoint(service *model.Service, servicePort *networking.Port,
 		}
 	}
 
-	sa := ""
-	if endpoint.ServiceAccount != "" {
-		sa = spiffe.MustGenSpiffeURI(service.Attributes.Namespace, endpoint.ServiceAccount)
-	}
 	return &model.ServiceInstance{
 		Endpoint: &model.IstioEndpoint{
 			Address:         addr,
@@ -158,10 +150,9 @@ func convertEndpoint(service *model.Service, servicePort *networking.Port,
 			Locality: model.Locality{
 				Label: endpoint.Locality,
 			},
-			LbWeight:       endpoint.Weight,
-			Labels:         endpoint.Labels,
-			TLSMode:        tlsMode,
-			ServiceAccount: sa,
+			LbWeight: endpoint.Weight,
+			Labels:   endpoint.Labels,
+			TLSMode:  tlsMode,
 		},
 		Service:     service,
 		ServicePort: convertPort(servicePort),
@@ -221,25 +212,6 @@ func convertInstances(cfg model.Config, services []*model.Service) []*model.Serv
 					out = append(out, convertEndpoint(service, serviceEntryPort, endpoint, tlsMode))
 				}
 			}
-		}
-	}
-	return out
-}
-
-// The foreign service instance has pointer to the foreign service and its service port.
-// We need to create our own but we can retain the endpoint already created.
-func convertForeignServiceInstances(foreignInstance *model.ServiceInstance, serviceEntryServices []*model.Service,
-	serviceEntry *networking.ServiceEntry) []*model.ServiceInstance {
-	out := make([]*model.ServiceInstance, 0)
-	for _, service := range serviceEntryServices {
-		for _, serviceEntryPort := range serviceEntry.Ports {
-			ep := *foreignInstance.Endpoint
-			ep.ServicePortName = serviceEntryPort.Name
-			out = append(out, &model.ServiceInstance{
-				Endpoint:    &ep,
-				Service:     service,
-				ServicePort: convertPort(serviceEntryPort),
-			})
 		}
 	}
 	return out
