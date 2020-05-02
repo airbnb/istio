@@ -228,11 +228,12 @@ func (s *DiscoveryServer) StreamAggregatedResources(stream ads.AggregatedDiscove
 				return receiveError
 			}
 			// This should be only set for the first request. The node id may not be set - for example malicious clients.
-			if con.node == nil {
-				if err := s.initConnection(discReq.Node, con); err != nil {
+			if con.node == nil { // same condition is checked inside initConnection
+				if cancel, err := s.initConnection(discReq.Node, con); err != nil {
 					return err
+				} else if cancel != nil {
+					defer cancel()
 				}
-				defer s.removeCon(con.ConID)
 			}
 
 			// Based on node metadata a different generator was selected, use it instead of the default
@@ -248,28 +249,28 @@ func (s *DiscoveryServer) StreamAggregatedResources(stream ads.AggregatedDiscove
 
 			switch discReq.TypeUrl {
 			case ClusterType, v3.ClusterType:
-				if err := s.handleTypeURL(discReq.TypeUrl, &con.RequestedTypes.CDS); err != nil {
+				if err := s.handleTypeURL(con, discReq.TypeUrl, &con.RequestedTypes.CDS); err != nil {
 					return err
 				}
 				if err := s.handleCds(con, discReq); err != nil {
 					return err
 				}
 			case ListenerType, v3.ListenerType:
-				if err := s.handleTypeURL(discReq.TypeUrl, &con.RequestedTypes.LDS); err != nil {
+				if err := s.handleTypeURL(con, discReq.TypeUrl, &con.RequestedTypes.LDS); err != nil {
 					return err
 				}
 				if err := s.handleLds(con, discReq); err != nil {
 					return err
 				}
 			case RouteType, v3.RouteType:
-				if err := s.handleTypeURL(discReq.TypeUrl, &con.RequestedTypes.RDS); err != nil {
+				if err := s.handleTypeURL(con, discReq.TypeUrl, &con.RequestedTypes.RDS); err != nil {
 					return err
 				}
 				if err := s.handleRds(con, discReq); err != nil {
 					return err
 				}
 			case EndpointType, v3.EndpointType:
-				if err := s.handleTypeURL(discReq.TypeUrl, &con.RequestedTypes.EDS); err != nil {
+				if err := s.handleTypeURL(con, discReq.TypeUrl, &con.RequestedTypes.EDS); err != nil {
 					return err
 				}
 				if err := s.handleEds(con, discReq); err != nil {
@@ -303,9 +304,11 @@ func (s *DiscoveryServer) StreamAggregatedResources(stream ads.AggregatedDiscove
 // an error is returned. For example, if a v2 cluster request was sent initially, then a v3 response was received, we will throw an error.
 // This is to ensure that when we do pushes, we are sending a consistent type, rather than flipping between v2 and v3.
 // A proper XDS client will not send mixed versions.
-func (s *DiscoveryServer) handleTypeURL(typeURL string, requestedType *string) error {
+func (s *DiscoveryServer) handleTypeURL(con *XdsConnection, typeURL string, requestedType *string) error {
 	if *requestedType == "" {
+		con.mu.Lock()
 		*requestedType = typeURL
+		con.mu.Unlock()
 	} else if *requestedType != typeURL {
 		return fmt.Errorf("invalid type %v, expected %v", typeURL, *requestedType)
 	}
@@ -463,10 +466,18 @@ func listEqualUnordered(a []string, b []string) bool {
 
 // update the node associated with the connection, after receiving a a packet from envoy, also adds the connection
 // to the tracking map.
-func (s *DiscoveryServer) initConnection(node *core.Node, con *XdsConnection) error {
+func (s *DiscoveryServer) initConnection(node *core.Node, con *XdsConnection) (func(), error) {
+	con.mu.RLock() // may not be needed - once per connection, but locking for consistency.
+	initialized := con.node != nil
+	con.mu.RUnlock()
+
+	if initialized {
+		return nil, nil // only need to init the node on first request in the stream
+	}
+
 	proxy, err := s.initProxy(node)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Based on node metadata and version, we can associate a different generator.
@@ -483,7 +494,7 @@ func (s *DiscoveryServer) initConnection(node *core.Node, con *XdsConnection) er
 	s.addCon(con.ConID, con)
 	con.mu.Unlock()
 
-	return nil
+	return func() { s.removeCon(con.ConID) }, nil
 }
 
 // initProxy initializes the Proxy from node.
