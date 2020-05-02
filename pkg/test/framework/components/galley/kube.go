@@ -118,10 +118,6 @@ type kubeComponent struct {
 
 var _ Instance = &kubeComponent{}
 
-func (c *kubeComponent) GetConfigDir() string {
-	return ""
-}
-
 // ID implements resource.Instance
 func (c *kubeComponent) ID() resource.ID {
 	return c.id
@@ -231,25 +227,6 @@ func (c *kubeComponent) ApplyConfigDir(ns namespace.Instance, sourceDir string) 
 		}
 
 		return c.ApplyConfig(ns, string(contents))
-	})
-}
-
-// ApplyConfigDir implements Galley.ApplyConfigDir.
-func (c *kubeComponent) DeleteConfigDir(ns namespace.Instance, sourceDir string) (err error) {
-	return filepath.Walk(sourceDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
-
-		contents, readerr := ioutil.ReadFile(path)
-		if readerr != nil {
-			return readerr
-		}
-
-		return c.DeleteConfig(ns, string(contents))
 	})
 }
 

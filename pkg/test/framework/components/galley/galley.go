@@ -43,14 +43,8 @@ type Instance interface {
 	// ApplyConfigDir recursively applies all the config files in the specified directory
 	ApplyConfigDir(ns namespace.Instance, configDir string) error
 
-	// DeleteConfigDir recursively deletes all the config files in the specified directory
-	DeleteConfigDir(ns namespace.Instance, configDir string) error
-
 	// ClearConfig clears all applied config so far.
 	ClearConfig() error
-
-	// GetConfigDir returns the current configuration directory.
-	GetConfigDir() string
 
 	// SetMeshConfig applies the given mesh config.
 	SetMeshConfig(meshCfg string) error

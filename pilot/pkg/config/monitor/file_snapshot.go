@@ -40,16 +40,14 @@ var (
 // config and filter criteria for which of those configs will be parsed.
 type FileSnapshot struct {
 	root             string
-	domainSuffix     string
 	configTypeFilter map[resource.GroupVersionKind]bool
 }
 
 // NewFileSnapshot returns a snapshotter.
 // If no types are provided in the descriptor, all Istio types will be allowed.
-func NewFileSnapshot(root string, schemas collection.Schemas, domainSuffix string) *FileSnapshot {
+func NewFileSnapshot(root string, schemas collection.Schemas) *FileSnapshot {
 	snapshot := &FileSnapshot{
 		root:             root,
-		domainSuffix:     domainSuffix,
 		configTypeFilter: make(map[resource.GroupVersionKind]bool),
 	}
 
@@ -83,7 +81,7 @@ func (f *FileSnapshot) ReadConfigFiles() ([]*model.Config, error) {
 			log.Warnf("Failed to read %s: %v", path, err)
 			return err
 		}
-		configs, err := parseInputs(data, f.domainSuffix)
+		configs, err := parseInputs(data)
 		if err != nil {
 			log.Warnf("Failed to parse %s: %v", path, err)
 			return err
@@ -108,14 +106,13 @@ func (f *FileSnapshot) ReadConfigFiles() ([]*model.Config, error) {
 }
 
 // parseInputs is identical to crd.ParseInputs, except that it returns an array of config pointers.
-func parseInputs(data []byte, domainSuffix string) ([]*model.Config, error) {
+func parseInputs(data []byte) ([]*model.Config, error) {
 	configs, _, err := crd.ParseInputs(string(data))
 
 	// Convert to an array of pointers.
 	refs := make([]*model.Config, len(configs))
 	for i := range configs {
 		refs[i] = &configs[i]
-		refs[i].Domain = domainSuffix
 	}
 	return refs, err
 }
