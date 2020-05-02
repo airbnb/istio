@@ -23,8 +23,6 @@ import (
 
 	"github.com/gogo/protobuf/types"
 
-	"istio.io/api/label"
-
 	"istio.io/pkg/ledger"
 	"istio.io/pkg/log"
 
@@ -247,7 +245,7 @@ func (c *controller) Apply(change *sink.Change) error {
 }
 
 func (c *controller) objectInRevision(o *model.Config) bool {
-	configEnv, f := o.Labels[label.IstioRev]
+	configEnv, f := o.Labels[model.RevisionLabel]
 	if !f {
 		// This is a global object, and always included
 		return true

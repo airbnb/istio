@@ -28,17 +28,15 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"istio.io/api/label"
-
 	"istio.io/api/operator/v1alpha1"
-	"istio.io/pkg/version"
-
 	valuesv1alpha1 "istio.io/istio/operator/pkg/apis/istio/v1alpha1"
 	"istio.io/istio/operator/pkg/name"
 	"istio.io/istio/operator/pkg/object"
 	"istio.io/istio/operator/pkg/util"
 	"istio.io/istio/operator/pkg/util/clog"
 	"istio.io/istio/operator/pkg/util/progress"
+	"istio.io/istio/pilot/pkg/model"
+	"istio.io/pkg/version"
 )
 
 // HelmReconciler reconciles resources rendered by a set of helm charts.
@@ -304,7 +302,7 @@ func (h *HelmReconciler) addComponentLabels(coreLabels map[string]string, compon
 		if revision == "" {
 			revision = "default"
 		}
-		labels[label.IstioRev] = revision
+		labels[model.RevisionLabel] = revision
 	}
 
 	labels[istioComponentLabelStr] = componentName

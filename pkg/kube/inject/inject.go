@@ -36,8 +36,6 @@ import (
 	"github.com/gogo/protobuf/types"
 	"github.com/hashicorp/go-multierror"
 
-	"istio.io/api/label"
-
 	"istio.io/istio/pkg/config/mesh"
 	"istio.io/istio/pkg/config/validation"
 	"istio.io/istio/pkg/util/gogoprotomarshal"
@@ -94,7 +92,7 @@ var (
 		annotation.SidecarTrafficExcludeOutboundPorts.Name:        ValidateExcludeOutboundPorts,
 		annotation.SidecarTrafficKubevirtInterfaces.Name:          alwaysValidFunc,
 		annotation.PrometheusMergeMetrics.Name:                    validateBool,
-		annotation.ProxyConfig.Name:                               validateProxyConfig,
+		ProxyConfigAnnotation:                                     validateProxyConfig,
 	}
 )
 
@@ -440,6 +438,9 @@ func flippedContains(needle, haystack string) bool {
 	return strings.Contains(haystack, needle)
 }
 
+// ProxyConfigAnnotation determines the mesh config overrides for a workloadTODO move this to API
+var ProxyConfigAnnotation = "istio.io/proxyConfig"
+
 // InjectionData renders sidecarTemplate with valuesConfig.
 func InjectionData(sidecarTemplate, valuesConfig, version string, typeMetadata *metav1.TypeMeta, deploymentMetadata *metav1.ObjectMeta, spec *corev1.PodSpec,
 	metadata *metav1.ObjectMeta, meshConfig *meshconfig.MeshConfig) (
@@ -463,7 +464,7 @@ func InjectionData(sidecarTemplate, valuesConfig, version string, typeMetadata *
 		return nil, "", multierror.Prefix(err, "could not parse configuration values:")
 	}
 
-	if pca, f := metadata.GetAnnotations()[annotation.ProxyConfig.Name]; f {
+	if pca, f := metadata.GetAnnotations()[ProxyConfigAnnotation]; f {
 		var merr error
 		meshConfig, merr = mesh.ApplyProxyConfig(pca, *meshConfig)
 		if merr != nil {
@@ -789,9 +790,9 @@ func IntoObject(sidecarTemplate string, valuesConfig string, revision string, me
 	}
 	// This function, IntoObject(), is only used on the 'istioctl kube-kubeinject' path, which
 	// doesn't use Pilot bootstrap variables.
-	metadata.Labels[label.IstioRev] = revision
-	if status != "" && metadata.Labels[label.TLSMode] == "" {
-		metadata.Labels[label.TLSMode] = model.IstioMutualTLSModeLabel
+	metadata.Labels[model.RevisionLabel] = revision
+	if status != "" && metadata.Labels[model.TLSModeLabelName] == "" {
+		metadata.Labels[model.TLSModeLabelName] = model.IstioMutualTLSModeLabel
 	}
 
 	return out, nil
