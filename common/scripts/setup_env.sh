@@ -90,25 +90,16 @@ do
   unset -f "${f}"
 done
 
-# Set conditional host mounts
+# Set up conditional host mounts for docker and kubernetes config
 export CONDITIONAL_HOST_MOUNTS=${CONDITIONAL_HOST_MOUNTS:-}
-
-# docker conditional host mount (needed for make docker push)
 if [[ -d "${HOME}/.docker" ]]; then
   CONDITIONAL_HOST_MOUNTS+="--mount type=bind,source=${HOME}/.docker,destination=/config/.docker,readonly "
 fi
-
-# gcloud conditional host mount (needed for docker push with the gcloud auth configure-docker)
 if [[ -d "${HOME}/.config/gcloud" ]]; then
   CONDITIONAL_HOST_MOUNTS+="--mount type=bind,source=${HOME}/.config/gcloud,destination=/config/.config/gcloud,readonly "
 fi
-
-# Conditional host mount if KUBECONFIG is set
-if [[ -n "${KUBECONFIG}" ]]; then
-  CONDITIONAL_HOST_MOUNTS+="--mount type=bind,source=$(dirname "${KUBECONFIG}"),destination=/home/.kube,readonly "
-elif [[ -f "${HOME}/.kube/config" ]]; then
-  # otherwise execute a conditional host mount if $HOME/.kube/config is set
-  CONDITIONAL_HOST_MOUNTS+="--mount type=bind,source=${HOME}/.kube,destination=/home/.kube,readonly "
+if [[ -d "${HOME}/.kube" ]]; then
+  CONDITIONAL_HOST_MOUNTS+="--mount type=bind,source=${HOME}/.kube,destination=/home/.kube "
 fi
 
 # Avoid recursive calls to make from attempting to start an additional container
