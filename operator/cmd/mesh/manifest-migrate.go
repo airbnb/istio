@@ -59,7 +59,7 @@ func manifestMigrateCmd(rootArgs *rootArgs, mmArgs *manifestMigrateArgs) *cobra.
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			l := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
+			l := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr())
 			return migrateFromFiles(rootArgs, mmArgs, args, l)
 		}}
 }

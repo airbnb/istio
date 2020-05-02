@@ -111,7 +111,7 @@ func UpgradeCmd() *cobra.Command {
 			"traffic may be disrupted during upgrade. Please ensure PodDisruptionBudgets " +
 			"are defined to maintain service continuity.",
 		RunE: func(cmd *cobra.Command, args []string) (e error) {
-			l := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.OutOrStderr(), installerScope)
+			l := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.OutOrStderr())
 			initLogsOrExit(rootArgs)
 			err := upgrade(rootArgs, macArgs, l)
 			if err != nil {
