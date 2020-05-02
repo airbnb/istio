@@ -22,8 +22,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"istio.io/istio/pilot/pkg/model"
-
 	"k8s.io/api/admissionregistration/v1beta1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
@@ -68,8 +66,8 @@ func (s *Server) initSidecarInjector(args *PilotArgs) error {
 		ValuesFile: filepath.Join(injectPath, "values"),
 		MeshFile:   args.Mesh.ConfigFile,
 		Env:        s.environment,
-		CertFile:   model.GetOrDefault(args.TLSOptions.CertFile, filepath.Join(dnsCertDir, "cert-chain.pem")),
-		KeyFile:    model.GetOrDefault(args.TLSOptions.KeyFile, filepath.Join(dnsCertDir, "key.pem")),
+		CertFile:   filepath.Join(dnsCertDir, "cert-chain.pem"),
+		KeyFile:    filepath.Join(dnsCertDir, "key.pem"),
 		// Disable monitoring. The injection metrics will be picked up by Pilots metrics exporter already
 		MonitoringPort: -1,
 		Mux:            s.httpsMux,
