@@ -46,11 +46,6 @@ import (
 
 var (
 	verifyInstallCmd *cobra.Command
-	istioOperatorGVR = apimachinery_schema.GroupVersionResource{
-		Group:    v1alpha1.SchemeGroupVersion.Group,
-		Version:  v1alpha1.SchemeGroupVersion.Version,
-		Resource: "istiooperators",
-	}
 )
 
 func verifyInstallIOPrevision(enableVerbose bool, istioNamespaceFlag string,
@@ -59,7 +54,7 @@ func verifyInstallIOPrevision(enableVerbose bool, istioNamespaceFlag string,
 
 	iop, err := operatorFromCluster(istioNamespaceFlag, opts.Revision, restClientGetter)
 	if err != nil {
-		return fmt.Errorf("could not load IstioOperator from cluster: %v.  Use --filename", err)
+		return fmt.Errorf("could not load IstioOperator from cluster: %v", err)
 	}
 	crdCount, istioDeploymentCount, err := verifyPostInstallIstioOperator(enableVerbose,
 		istioNamespaceFlag,
@@ -72,7 +67,16 @@ func verifyInstallIOPrevision(enableVerbose bool, istioNamespaceFlag string,
 
 func verifyInstall(enableVerbose bool, istioNamespaceFlag string,
 	restClientGetter genericclioptions.RESTClientGetter, options resource.FilenameOptions,
-	writer io.Writer) error {
+	writer io.Writer, args []string) error {
+
+	// If no args, perform pre-check
+	if len(options.Filenames) == 0 {
+		if len(args) != 0 {
+			_, _ = fmt.Fprint(writer, verifyInstallCmd.UsageString())
+			return fmt.Errorf("verify-install takes no arguments to perform installation pre-check")
+		}
+		return installPreCheck(istioNamespaceFlag, restClientGetter, writer)
+	}
 
 	// This is not a pre-check.  Check that the supplied resources exist in the cluster
 	r := resource.NewBuilder(restClientGetter).
@@ -279,14 +283,13 @@ func NewVerifyCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(c *cobra.Command, args []string) error {
-			// If the user did not specify a file, compare install to in-cluster IOP
-			if len(fileNameFlags.ToOptions().Filenames) == 0 {
+			// If --revision is specified, get the expected configuration from the IstioOperator
+			if c.Flags().Changed("revision") {
 				return verifyInstallIOPrevision(enableVerbose, istioNamespace, kubeConfigFlags,
 					c.OutOrStderr(), opts)
 			}
-			// When the user specifies a file, compare against it.
 			return verifyInstall(enableVerbose, istioNamespace, kubeConfigFlags,
-				fileNameFlags.ToOptions(), c.OutOrStderr())
+				fileNameFlags.ToOptions(), c.OutOrStderr(), args)
 		},
 	}
 
@@ -415,6 +418,11 @@ func operatorFromCluster(istioNamespaceFlag string, revision string, restClientG
 	if err != nil {
 		return nil, err
 	}
+	istioOperatorGVR := apimachinery_schema.GroupVersionResource{
+		Group:    v1alpha1.SchemeGroupVersion.Group,
+		Version:  v1alpha1.SchemeGroupVersion.Version,
+		Resource: "istiooperators",
+	}
 	ul, err := client.
 		Resource(istioOperatorGVR).
 		Namespace(istioNamespaceFlag).
@@ -438,29 +446,4 @@ func operatorFromCluster(istioNamespaceFlag string, revision string, restClientG
 		}
 	}
 	return nil, fmt.Errorf("control plane revision %q not found", revision)
-}
-
-// Find all IstioOperator in the cluster.
-func allOperatorsInCluster(client dynamic.Interface) ([]*v1alpha1.IstioOperator, error) {
-	ul, err := client.
-		Resource(istioOperatorGVR).
-		List(context.TODO(), meta_v1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	retval := make([]*v1alpha1.IstioOperator, 0)
-	for _, un := range ul.Items {
-		un.SetCreationTimestamp(meta_v1.Time{}) // UnmarshalIstioOperator chokes on these
-		by, err := json.Marshal(un.Object)
-		if err != nil {
-			return nil, err
-		}
-
-		iop, err := operator_istio.UnmarshalIstioOperator(string(by))
-		if err != nil {
-			return nil, err
-		}
-		retval = append(retval, iop)
-	}
-	return retval, nil
 }

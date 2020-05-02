@@ -104,7 +104,7 @@ func TestPreCheck(t *testing.T) {
 				version:   version1_13,
 				namespace: "istio-system",
 			},
-			expectedException: false, // It is fine to precheck an existing namespace; we might be installing canary control plane
+			expectedException: true,
 		},
 		{description: "Valid Istio System",
 			config: &mockClientExecPreCheckConfig{
@@ -149,20 +149,20 @@ func TestPreCheck(t *testing.T) {
 func verifyOutput(t *testing.T, c testcase) {
 	t.Helper()
 
-	clientFactory = mockPreCheckClient(c.config)
+	clientExecFactory = mockPreCheckClient(c.config)
 	var out bytes.Buffer
-	precheckCmd := NewPrecheckCommand()
-	precheckCmd.SetOutput(&out)
-	fErr := precheckCmd.Execute()
+	verifyInstallCmd := NewVerifyCommand()
+	verifyInstallCmd.SetOutput(&out)
+	fErr := verifyInstallCmd.Execute()
 	output := out.String()
 	if c.expectedException {
 		if fErr == nil {
-			t.Fatalf("Wanted an exception for 'istioctl x precheck',"+
+			t.Fatalf("Wanted an exception for 'istioctl verify-install',"+
 				"didn't get one, output was %q", output)
 		}
 	} else {
 		if fErr != nil {
-			t.Fatalf("Unwanted exception for 'istioctl x precheck': %v", fErr)
+			t.Fatalf("Unwanted exception for 'istioctl verify-install': %v", fErr)
 		}
 	}
 }
@@ -218,8 +218,4 @@ func (m *mockClientExecPreCheckConfig) checkAuthorization(
 
 func (m *mockClientExecPreCheckConfig) checkMutatingWebhook() error {
 	return nil
-}
-
-func (m *mockClientExecPreCheckConfig) getIstioInstalls() ([]istioInstall, error) {
-	return []istioInstall{}, nil
 }
