@@ -45,24 +45,22 @@ func (c *nativeComponent) ID() resource.ID {
 }
 
 // Invoke implements Instance
-func (c *nativeComponent) Invoke(args []string) (string, string, error) {
+func (c *nativeComponent) Invoke(args []string) (string, error) {
 	var out bytes.Buffer
-	var err bytes.Buffer
 	rootCmd := cmd.GetRootCmd(args)
 	rootCmd.SetOut(&out)
-	rootCmd.SetErr(&err)
+	rootCmd.SetErr(&out)
 	fErr := rootCmd.Execute()
-	return out.String(), err.String(), fErr
+	return out.String(), fErr
 }
 
 // InvokeOrFail implements Instance
-func (c *nativeComponent) InvokeOrFail(t *testing.T, args []string) (string, string) {
-	output, stderr, err := c.Invoke(args)
+func (c *nativeComponent) InvokeOrFail(t *testing.T, args []string) string {
+	output, err := c.Invoke(args)
 	if err != nil {
 		t.Logf("Unwanted exception for 'istioctl %s': %v", strings.Join(args, " "), err)
 		t.Logf("Output:\n%v", output)
-		t.Logf("Error:\n%v", stderr)
 		t.FailNow()
 	}
-	return output, stderr
+	return output
 }
