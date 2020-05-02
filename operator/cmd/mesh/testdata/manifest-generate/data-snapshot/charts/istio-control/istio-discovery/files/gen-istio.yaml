@@ -272,7 +272,9 @@ data:
           },
           "lightstep": {
             "accessToken": "",
-            "address": ""
+            "address": "",
+            "cacertPath": "",
+            "secure": true
           },
           "stackdriver": {
             "debug": false,

@@ -49,13 +49,6 @@ data:
         DNS_AGENT: ""
       serviceCluster: istio-proxy
       tracing:
-        tlsSettings:
-          caCertificates: null
-          clientCertificate: null
-          mode: DISABLE
-          privateKey: null
-          sni: null
-          subjectAltNames: []
         zipkin:
           address: zipkin.istio-system:9411
     disableMixerHttpReports: true
@@ -269,7 +262,9 @@ data:
           },
           "lightstep": {
             "accessToken": "",
-            "address": ""
+            "address": "",
+            "cacertPath": "",
+            "secure": true
           },
           "stackdriver": {
             "debug": false,
@@ -284,24 +279,6 @@ data:
         "trustDomain": "cluster.local",
         "trustDomainAliases": [],
         "useMCP": false
-      },
-      "meshConfig": {
-        "defaultConfig": {
-          "proxyMetadata": {
-            "DNS_AGENT": ""
-          },
-          "tracing": {
-            "tlsSettings": {
-              "caCertificates": null,
-              "clientCertificate": null,
-              "mode": "DISABLE",
-              "privateKey": null,
-              "sni": null,
-              "subjectAltNames": []
-            }
-          }
-        },
-        "enablePrometheusMerge": false
       },
       "revision": "",
       "sidecarInjectorWebhook": {
@@ -658,8 +635,8 @@ data:
         {{- end }}
         - name: istio-podinfo
           mountPath: /etc/istio/pod
-         {{- if and (eq .Values.global.proxy.tracer "lightstep") .Values.meshConfig.defaultConfig.tracing.tlsSettings }}
-        - mountPath: {{ directory .ProxyConfig.GetTracing.GetTlsSettings.GetCaCertificates }}
+        {{- if and (eq .Values.global.proxy.tracer "lightstep") .Values.global.tracer.lightstep.cacertPath }}
+        - mountPath: {{ directory .ProxyConfig.GetTracing.GetLightstep.GetCacertPath }}
           name: lightstep-certs
           readOnly: true
         {{- end }}
@@ -721,7 +698,7 @@ data:
         {{ toYaml $value | indent 2 }}
         {{ end }}
         {{ end }}
-      {{- if and (eq .Values.global.proxy.tracer "lightstep") .Values.meshConfig.defaultConfig.tracing.tlsSettings }}
+      {{- if and (eq .Values.global.proxy.tracer "lightstep") .Values.global.tracer.lightstep.cacertPath }}
       - name: lightstep-certs
         secret:
           optional: true

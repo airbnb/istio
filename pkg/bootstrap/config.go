@@ -305,12 +305,10 @@ func getProxyConfigOptions(config *meshAPI.ProxyConfig, metadata *model.NodeMeta
 
 	// Add tracing options.
 	if config.Tracing != nil {
-		var isH2 bool = false
 		switch tracer := config.Tracing.Tracer.(type) {
 		case *meshAPI.Tracing_Zipkin_:
 			opts = append(opts, option.ZipkinAddress(tracer.Zipkin.Address))
 		case *meshAPI.Tracing_Lightstep_:
-			isH2 = true
 			// Create the token file.
 			lightstepAccessTokenPath := lightstepAccessTokenFile(config.ConfigPath)
 			lsConfigOut, err := os.Create(lightstepAccessTokenPath)
@@ -323,7 +321,9 @@ func getProxyConfigOptions(config *meshAPI.ProxyConfig, metadata *model.NodeMeta
 			}
 
 			opts = append(opts, option.LightstepAddress(tracer.Lightstep.Address),
-				option.LightstepToken(lightstepAccessTokenPath))
+				option.LightstepToken(lightstepAccessTokenPath),
+				option.LightstepSecure(tracer.Lightstep.Secure),
+				option.LightstepCACertPath(tracer.Lightstep.CacertPath))
 		case *meshAPI.Tracing_Datadog_:
 			opts = append(opts, option.DataDogAddress(tracer.Datadog.Address))
 		case *meshAPI.Tracing_Stackdriver_:
@@ -340,7 +340,6 @@ func getProxyConfigOptions(config *meshAPI.ProxyConfig, metadata *model.NodeMeta
 				option.StackDriverMaxAttributes(getInt64ValueOrDefault(tracer.Stackdriver.MaxNumberOfAttributes, 200)),
 				option.StackDriverMaxEvents(getInt64ValueOrDefault(tracer.Stackdriver.MaxNumberOfMessageEvents, 200)))
 		}
-		opts = append(opts, option.TracingTLS(config.Tracing.TlsSettings, metadata, isH2))
 	}
 
 	// Add options for Envoy metrics.

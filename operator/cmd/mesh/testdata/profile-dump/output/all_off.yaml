@@ -340,6 +340,8 @@ spec:
         lightstep:
           accessToken: ""
           address: ""
+          cacertPath: ""
+          secure: true
         stackdriver:
           debug: false
           maxNumberOfAnnotations: 200

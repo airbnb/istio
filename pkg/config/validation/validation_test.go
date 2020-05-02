@@ -486,6 +486,8 @@ func TestValidateProxyConfig(t *testing.T) {
 							Lightstep: &meshconfig.Tracing_Lightstep{
 								Address:     "collector.lightstep:8080",
 								AccessToken: "abcdefg1234567",
+								Secure:      false,
+								CacertPath:  "/etc/lightstep/cacert.pem",
 							},
 						},
 					}
@@ -502,6 +504,8 @@ func TestValidateProxyConfig(t *testing.T) {
 							Lightstep: &meshconfig.Tracing_Lightstep{
 								Address:     "10.0.0.100",
 								AccessToken: "abcdefg1234567",
+								Secure:      false,
+								CacertPath:  "/etc/lightstep/cacert.pem",
 							},
 						},
 					}
@@ -518,6 +522,8 @@ func TestValidateProxyConfig(t *testing.T) {
 							Lightstep: &meshconfig.Tracing_Lightstep{
 								Address:     "",
 								AccessToken: "abcdefg1234567",
+								Secure:      false,
+								CacertPath:  "/etc/lightstep/cacert.pem",
 							},
 						},
 					}
@@ -534,6 +540,8 @@ func TestValidateProxyConfig(t *testing.T) {
 							Lightstep: &meshconfig.Tracing_Lightstep{
 								Address:     "collector.lightstep:8080",
 								AccessToken: "",
+								Secure:      false,
+								CacertPath:  "/etc/lightstep/cacert.pem",
 							},
 						},
 					}
@@ -550,6 +558,8 @@ func TestValidateProxyConfig(t *testing.T) {
 							Lightstep: &meshconfig.Tracing_Lightstep{
 								Address:     "10.0.0.100",
 								AccessToken: "",
+								Secure:      false,
+								CacertPath:  "/etc/lightstep/cacert.pem",
 							},
 						},
 					}
@@ -566,6 +576,26 @@ func TestValidateProxyConfig(t *testing.T) {
 							Lightstep: &meshconfig.Tracing_Lightstep{
 								Address:     "",
 								AccessToken: "",
+								Secure:      false,
+								CacertPath:  "/etc/lightstep/cacert.pem",
+							},
+						},
+					}
+				},
+			),
+			isValid: false,
+		},
+		{
+			name: "lightstep cacert is missing",
+			in: modify(valid,
+				func(c *meshconfig.ProxyConfig) {
+					c.Tracing = &meshconfig.Tracing{
+						Tracer: &meshconfig.Tracing_Lightstep_{
+							Lightstep: &meshconfig.Tracing_Lightstep{
+								Address:     "collector.lightstep:8080",
+								AccessToken: "abcdefg1234567",
+								Secure:      true,
+								CacertPath:  "",
 							},
 						},
 					}

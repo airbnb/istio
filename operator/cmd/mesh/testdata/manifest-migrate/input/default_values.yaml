@@ -460,6 +460,8 @@ global:
     lightstep:
       address: ""                
       accessToken: ""            
+      secure: true               
+      cacertPath: ""             
     zipkin:
       address: ""
     datadog:

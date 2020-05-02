@@ -356,6 +356,8 @@ spec:
         lightstep:
           accessToken: ""
           address: ""
+          cacertPath: ""
+          secure: true
         zipkin:
           address: ""
       trustDomain: cluster.local
