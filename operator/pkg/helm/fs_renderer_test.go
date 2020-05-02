@@ -18,7 +18,7 @@ import (
 	"errors"
 	"testing"
 
-	"helm.sh/helm/v3/pkg/chart"
+	"k8s.io/helm/pkg/proto/hapi/chart"
 )
 
 func TestNewFileTemplateRenderer(t *testing.T) {
@@ -80,7 +80,16 @@ func TestRenderManifest(t *testing.T) {
 			desc:        "not-started",
 			inValues:    "",
 			startRender: false,
-			inChart:     chart.Chart{},
+			inChart: chart.Chart{
+				Metadata:             nil,
+				Templates:            nil,
+				Dependencies:         nil,
+				Values:               nil,
+				Files:                nil,
+				XXX_NoUnkeyedLiteral: struct{}{},
+				XXX_unrecognized:     nil,
+				XXX_sizecache:        0,
+			},
 			objFileTemplateReader: FileTemplateRenderer{
 				namespace:        "",
 				componentName:    "",

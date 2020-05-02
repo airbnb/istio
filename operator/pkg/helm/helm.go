@@ -25,17 +25,14 @@ import (
 	"sort"
 	"strings"
 
-	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/engine"
-	"sigs.k8s.io/yaml"
-
-	"helm.sh/helm/v3/pkg/chartutil"
-
-	"istio.io/pkg/log"
+	"k8s.io/helm/pkg/chartutil"
+	"k8s.io/helm/pkg/engine"
+	"k8s.io/helm/pkg/proto/hapi/chart"
+	"k8s.io/helm/pkg/timeconv"
 
 	"istio.io/istio/operator/pkg/util"
 	"istio.io/istio/operator/pkg/vfs"
+	"istio.io/pkg/log"
 )
 
 const (
@@ -106,21 +103,19 @@ func ReadProfileYAML(profile string) (string, error) {
 
 // renderChart renders the given chart with the given values and returns the resulting YAML manifest string.
 func renderChart(namespace, values string, chrt *chart.Chart) (string, error) {
+	config := &chart.Config{Raw: values, Values: map[string]*chart.Value{}}
 	options := chartutil.ReleaseOptions{
 		Name:      "istio",
+		Time:      timeconv.Now(),
 		Namespace: namespace,
 	}
-	valuesMap := map[string]interface{}{}
-	if err := yaml.Unmarshal([]byte(values), &valuesMap); err != nil {
-		return "", fmt.Errorf("failed to unmarshal values: %v", err)
-	}
 
-	vals, err := chartutil.ToRenderValues(chrt, valuesMap, options, nil)
+	vals, err := chartutil.ToRenderValuesCaps(chrt, config, options, nil)
 	if err != nil {
 		return "", err
 	}
 
-	files, err := engine.Render(chrt, vals)
+	files, err := engine.New().Render(chrt, vals)
 	if err != nil {
 		return "", err
 	}
@@ -222,13 +217,13 @@ func GetAddonNamesFromCharts(chartsRootDir string, capitalize bool) (addonChartN
 				if err != nil {
 					return nil, err
 				}
-				bf := &loader.BufferedFile{
+				bf := &chartutil.BufferedFile{
 					Name: basename,
 					Data: b,
 				}
-				bfs := []*loader.BufferedFile{bf}
+				bfs := []*chartutil.BufferedFile{bf}
 				scope.Debugf("Chart loaded: %s", bf.Name)
-				chart, err := loader.LoadFiles(bfs)
+				chart, err := chartutil.LoadFiles(bfs)
 				if err != nil {
 					return nil, err
 				} else if addonName := getAddonName(chart.Metadata); addonName != nil {

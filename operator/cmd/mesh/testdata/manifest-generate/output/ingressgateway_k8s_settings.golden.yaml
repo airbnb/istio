@@ -6,12 +6,14 @@ metadata:
   labels:
     app: istio-ingressgateway
     istio: ingressgateway
+    
     release: istio
 spec:
   selector:
     matchLabels:
       app: istio-ingressgateway
       istio: ingressgateway
+      
   strategy:
     rollingUpdate:
       maxSurge: 100%
@@ -21,6 +23,7 @@ spec:
       labels:
         app: istio-ingressgateway
         istio: ingressgateway
+        
         heritage: Tiller
         release: istio
         chart: gateways
@@ -70,6 +73,7 @@ spec:
             requests:
               cpu: 100m
               memory: 128Mi
+            
           env:
           - name: JWT_POLICY
             value: third-party-jwt
