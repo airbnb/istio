@@ -21,8 +21,6 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"istio.io/istio/pkg/util/gogoprotomarshal"
-
 	meshconfig "istio.io/api/mesh/v1alpha1"
 
 	"istio.io/istio/pkg/config/mesh"
@@ -60,29 +58,6 @@ defaultConfig:
 	if !reflect.DeepEqual(got, &want) {
 		t.Fatalf("Wrong default values:\n got %#v \nwant %#v", got, &want)
 	}
-	// Verify overrides
-	got, err = mesh.ApplyMeshConfigDefaults(`
-ingressClass: foo
-reportBatchMaxTime: 10s
-enableTracing: false
-defaultServiceExportTo: 
-- "foo"
-outboundTrafficPolicy:
-  mode: REGISTRY_ONLY
-clusterLocalNamespaces: 
-- "foons"
-defaultConfig:
-  tracing: {}
-  concurrency: 4`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.DefaultConfig.Tracing.GetZipkin() != nil {
-		t.Error("Failed to override tracing")
-	}
-
-	gotY, err := gogoprotomarshal.ToYAML(got)
-	t.Log("Result: \n", gotY, err)
 }
 
 func TestApplyMeshNetworksDefaults(t *testing.T) {
