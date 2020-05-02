@@ -53,6 +53,8 @@ func New(ctx resource.Context) (resource.Environment, error) {
 	}
 	e.id = ctx.TrackResource(e)
 
+	controlPlaneClusters := s.GetControlPlaneClusters()
+
 	e.KubeClusters = make([]Cluster, 0, len(s.KubeConfig))
 	for i := range s.KubeConfig {
 		a, err := kube.NewAccessor(s.KubeConfig[i], workDir)
@@ -61,9 +63,10 @@ func New(ctx resource.Context) (resource.Environment, error) {
 		}
 		clusterIndex := resource.ClusterIndex(i)
 		e.KubeClusters = append(e.KubeClusters, Cluster{
-			filename: s.KubeConfig[i],
-			index:    clusterIndex,
-			Accessor: a,
+			filename:            s.KubeConfig[i],
+			index:               clusterIndex,
+			controlPlaneCluster: controlPlaneClusters[clusterIndex],
+			Accessor:            a,
 		})
 	}
 
@@ -89,20 +92,11 @@ func (e *Environment) Clusters() []resource.Cluster {
 func (e *Environment) ControlPlaneClusters() []Cluster {
 	out := make([]Cluster, 0, len(e.KubeClusters))
 	for _, c := range e.KubeClusters {
-		if e.IsControlPlaneCluster(c) {
+		if c.IsControlPlaneCluster() {
 			out = append(out, c)
 		}
 	}
 	return out
-}
-
-// IsControlPlaneCluster returns true if the cluster uses its own control plane in the ControlPlaneTopology.
-// We return if there is no mapping for the cluster, similar to the behavior of the istio.test.kube.controlPlaneTopology.
-func (e *Environment) IsControlPlaneCluster(cluster resource.Cluster) bool {
-	if controlPlaneIndex, ok := e.Settings().ControlPlaneTopology[cluster.Index()]; ok {
-		return controlPlaneIndex == cluster.Index()
-	}
-	return true
 }
 
 func (e *Environment) Case(name environment.Name, fn func()) {
