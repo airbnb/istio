@@ -34,7 +34,7 @@ type mockTokenReviewClient struct {
 	err error
 }
 
-func (c mockTokenReviewClient) ValidateK8sJwt(jwt, jwtPolicy string, clusterID string) ([]string, error) {
+func (c mockTokenReviewClient) ValidateK8sJwt(jwt, jwtPolicy string) ([]string, error) {
 	if c.id != nil {
 		return c.id, nil
 	}
@@ -80,7 +80,7 @@ func TestNewKubeJWTAuthenticator(t *testing.T) {
 	}
 
 	for id, tc := range testCases {
-		authenticator, err := NewKubeJWTAuthenticator(nil, url, tc.caCertPath, tc.jwtPath, trustDomain, jwtPolicy, "kubernetes")
+		authenticator, err := NewKubeJWTAuthenticator(url, tc.caCertPath, tc.jwtPath, trustDomain, jwtPolicy)
 		if len(tc.expectedErrMsg) > 0 {
 			if err == nil {
 				t.Errorf("Case %s: Succeeded. Error expected: %v", id, err)
@@ -96,7 +96,6 @@ func TestNewKubeJWTAuthenticator(t *testing.T) {
 			client:      tokenreview.NewK8sSvcAcctAuthn(url, caCertFileContent, string(jwtFileContent)),
 			trustDomain: trustDomain,
 			jwtPolicy:   jwtPolicy,
-			clusterID:   "kubernetes",
 		}
 		if !reflect.DeepEqual(authenticator, expectedAuthenticator) {
 			t.Errorf("Case %q: Unexpected authentication result: want %v but got %v",
@@ -130,7 +129,7 @@ func TestAuthenticate(t *testing.T) {
 				},
 			},
 			client:         &mockTokenReviewClient{id: nil, err: fmt.Errorf("test error")},
-			expectedErrMsg: "failed to validate the JWT: invalid JWT policy: ",
+			expectedErrMsg: "failed to validate the JWT: test error",
 		},
 		"Wrong identity length": {
 			metadata: metadata.MD{
@@ -141,7 +140,7 @@ func TestAuthenticate(t *testing.T) {
 				},
 			},
 			client:         &mockTokenReviewClient{id: []string{"foo"}, err: nil},
-			expectedErrMsg: "failed to validate the JWT: invalid JWT policy: ",
+			expectedErrMsg: "failed to parse the JWT. Validation result length is not 2, but 1",
 		},
 		"Successful": {
 			metadata: metadata.MD{
