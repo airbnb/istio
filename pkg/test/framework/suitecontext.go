@@ -52,9 +52,7 @@ type suiteContext struct {
 	contextMu    sync.Mutex
 	contextNames map[string]struct{}
 
-	suiteLabels label.Set
-
-	outcomeMu    sync.RWMutex
+	suiteLabels  label.Set
 	testOutcomes []TestOutcome
 }
 
@@ -184,8 +182,6 @@ type TestOutcome struct {
 }
 
 func (s *suiteContext) registerOutcome(test *Test) {
-	s.outcomeMu.Lock()
-	defer s.outcomeMu.Unlock()
 	o := Passed
 	if test.notImplemented {
 		o = NotImplemented
