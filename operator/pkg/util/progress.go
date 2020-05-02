@@ -31,7 +31,6 @@ import (
 type ProgressLog struct {
 	components map[string]*ManifestLog
 	bar        *pb.ProgressBar
-	template   string
 	mu         sync.Mutex
 }
 
@@ -58,10 +57,6 @@ func (p *ProgressLog) createStatus(maxWidth int) string {
 		msg += fmt.Sprintf(` Waiting for %s`, strings.Join(wait, ", "))
 	}
 	prefix := `{{ yellow (cycle . "-" "-" "-" " ") }} `
-	if !p.bar.GetBool(pb.Terminal) {
-		// If we aren't a terminal, no need to spam extra lines
-		prefix = `{{ yellow "-" }} `
-	}
 	// reduce by 2 to allow for the "- " that will be added below
 	maxWidth -= 2
 	if maxWidth > 0 && len(msg) > maxWidth {
@@ -103,18 +98,21 @@ func (p *ProgressLog) reportProgress(component string) func() {
 		// The component has completed
 		if cmp.finished || cmp.err != "" {
 			if cmp.finished {
-				p.SetMessage(fmt.Sprintf(`{{ green "✔" }} Component %s installed`, component), true)
+				p.bar.SetTemplateString(fmt.Sprintf(`{{ green "✔" }} Component %s installed`, component))
 			} else {
-				p.SetMessage(fmt.Sprintf(`{{ red "✘" }} Component %s encountered an error: %s`, component, cmp.err), true)
+				p.bar.SetTemplateString(fmt.Sprintf(`{{ red "✘" }} Component %s encountered an error: %s`, component, cmp.err))
 			}
 			// Close the bar out, outputting a new line
+			p.bar.Finish()
+			p.bar.Write()
 			delete(p.components, component)
 
 			// Now we create a new bar, which will have the remaining components
 			p.bar = createBar()
 			return
 		}
-		p.SetMessage(p.createStatus(p.bar.Width()), false)
+		p.bar.SetTemplateString(p.createStatus(p.bar.Width()))
+		p.bar.Write()
 	}
 }
 
@@ -126,20 +124,6 @@ func (p *ProgressLog) NewComponent(component string) *ManifestLog {
 	defer p.mu.Unlock()
 	p.components[component] = ml
 	return ml
-}
-
-func (p *ProgressLog) SetMessage(status string, finish bool) {
-	// if we are not a terminal and there is no change, do not write
-	// This avoids redundant lines
-	if !p.bar.GetBool(pb.Terminal) && status == p.template {
-		return
-	}
-	p.template = status
-	p.bar.SetTemplateString(p.template)
-	if finish {
-		p.bar.Finish()
-	}
-	p.bar.Write()
 }
 
 // ManifestLog records progress for a single component
