@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	networking "istio.io/api/networking/v1alpha3"
-	"istio.io/istio/pkg/config/schema/resource"
 
 	"istio.io/istio/pkg/config/constants"
 	"istio.io/istio/pkg/config/host"
@@ -31,12 +30,6 @@ const (
 	currentNamespace  = "."
 	wildcardService   = host.Name("*")
 )
-
-var sidecarScopeKnownConfigTypes = map[resource.GroupVersionKind]struct{}{
-	ServiceEntryKind:    {},
-	VirtualServiceKind:  {},
-	DestinationRuleKind: {},
-}
 
 // SidecarScope is a wrapper over the Sidecar resource with some
 // preprocessed data to determine the list of services, virtualServices,
@@ -89,10 +82,8 @@ type SidecarScope struct {
 	// be forwarded.
 	OutboundTrafficPolicy *networking.OutboundTrafficPolicy
 
-	// Set of known configs this sidecar depends on.
-	// This field will be used to determine the config/resource scope
-	// which means which config changes will affect the proxies within this scope.
-	configDependencies map[ConfigKey]struct{}
+	// Set of all namespaces this sidecar depends on. This is determined from the egress config
+	namespaceDependencies map[string]struct{}
 }
 
 // IstioEgressListenerWrapper is a wrapper for
@@ -136,7 +127,7 @@ type IstioEgressListenerWrapper struct {
 	virtualServices []Config
 }
 
-// DefaultSidecarScopeForNamespace is a sidecar scope object with a default catch all egress listener
+// DefaultSidecarScope is a sidecar scope object with a default catch all egress listener
 // that matches the default Istio behavior: a sidecar has listeners for all services in the mesh
 // We use this scope when the user has not set any sidecar Config for a given config namespace.
 func DefaultSidecarScopeForNamespace(ps *PushContext, configNamespace string) *SidecarScope {
@@ -153,42 +144,17 @@ func DefaultSidecarScopeForNamespace(ps *PushContext, configNamespace string) *S
 	defaultEgressListener.virtualServices = ps.VirtualServices(&dummyNode, meshGateway)
 
 	out := &SidecarScope{
-		EgressListeners:    []*IstioEgressListenerWrapper{defaultEgressListener},
-		services:           defaultEgressListener.services,
-		destinationRules:   make(map[host.Name]*Config),
-		configDependencies: make(map[ConfigKey]struct{}),
+		EgressListeners:       []*IstioEgressListenerWrapper{defaultEgressListener},
+		services:              defaultEgressListener.services,
+		destinationRules:      make(map[host.Name]*Config),
+		namespaceDependencies: make(map[string]struct{}),
 	}
-
 	// Now that we have all the services that sidecars using this scope (in
 	// this config namespace) will see, identify all the destinationRules
 	// that these services need
 	for _, s := range out.services {
-		if dr := ps.DestinationRule(&dummyNode, s); dr != nil {
-			out.destinationRules[s.Hostname] = dr
-		}
-		out.AddConfigDependencies(ConfigKey{
-			Kind:      ServiceEntryKind,
-			Name:      string(s.Hostname),
-			Namespace: s.Attributes.Namespace,
-		})
-	}
-
-	for _, dr := range out.destinationRules {
-		out.AddConfigDependencies(ConfigKey{
-			Kind:      DestinationRuleKind,
-			Name:      dr.Name,
-			Namespace: dr.Namespace,
-		})
-	}
-
-	for _, el := range out.EgressListeners {
-		for _, vs := range el.virtualServices {
-			out.AddConfigDependencies(ConfigKey{
-				Kind:      VirtualServiceKind,
-				Name:      vs.Name,
-				Namespace: vs.Namespace,
-			})
-		}
+		out.destinationRules[s.Hostname] = ps.DestinationRule(&dummyNode, s)
+		out.namespaceDependencies[s.Attributes.Namespace] = struct{}{}
 	}
 
 	if ps.Mesh.OutboundTrafficPolicy != nil {
@@ -207,9 +173,7 @@ func ConvertToSidecarScope(ps *PushContext, sidecarConfig *Config, configNamespa
 	}
 
 	r := sidecarConfig.Spec.(*networking.Sidecar)
-	out := &SidecarScope{
-		configDependencies: make(map[ConfigKey]struct{}),
-	}
+	out := &SidecarScope{}
 
 	out.EgressListeners = make([]*IstioEgressListenerWrapper, 0)
 	for _, e := range r.Egress {
@@ -220,27 +184,26 @@ func ConvertToSidecarScope(ps *PushContext, sidecarConfig *Config, configNamespa
 	// Now collect all the imported services across all egress listeners in
 	// this sidecar crd. This is needed to generate CDS output
 	out.services = make([]*Service, 0)
-	servicesAdded := make(map[host.Name]*Service)
+	servicesAdded := make(map[string]*Service)
 	dummyNode := Proxy{
 		ConfigNamespace: configNamespace,
 	}
+
+	// Assign namespace dependencies
+	out.namespaceDependencies = make(map[string]struct{})
 
 	addService := func(s *Service) {
 		if s == nil {
 			return
 		}
-		if foundSvc, found := servicesAdded[s.Hostname]; !found {
-			servicesAdded[s.Hostname] = s
-			out.AddConfigDependencies(ConfigKey{
-				Kind:      ServiceEntryKind,
-				Name:      string(s.Hostname),
-				Namespace: s.Attributes.Namespace,
-			})
+		if foundSvc, found := servicesAdded[string(s.Hostname)]; !found {
+			servicesAdded[string(s.Hostname)] = s
 			out.services = append(out.services, s)
+			out.namespaceDependencies[s.Attributes.Namespace] = struct{}{}
 		} else if foundSvc.Attributes.Namespace == s.Attributes.Namespace && s.Ports != nil && len(s.Ports) > 0 {
 			// merge the ports to service when each listener generates partial service
 			// we only merge if the found service is in the same namespace as the one we're trying to add
-			os := servicesAdded[s.Hostname]
+			os := servicesAdded[string(s.Hostname)]
 			for _, p := range s.Ports {
 				found := false
 				for _, osp := range os.Ports {
@@ -268,12 +231,6 @@ func ConvertToSidecarScope(ps *PushContext, sidecarConfig *Config, configNamespa
 		// want in the hosts field, and the potentially random choice below won't matter
 		for _, vs := range listener.virtualServices {
 			v := vs.Spec.(*networking.VirtualService)
-			out.AddConfigDependencies(ConfigKey{
-				Kind:      VirtualServiceKind,
-				Name:      vs.Name,
-				Namespace: vs.Namespace,
-			})
-
 			for _, d := range virtualServiceDestinations(v) {
 				// Default to this hostname in our config namespace
 				if s, ok := ps.ServiceByHostnameAndNamespace[host.Name(d.Host)][configNamespace]; ok {
@@ -309,15 +266,7 @@ func ConvertToSidecarScope(ps *PushContext, sidecarConfig *Config, configNamespa
 	// that these services need
 	out.destinationRules = make(map[host.Name]*Config)
 	for _, s := range out.services {
-		dr := ps.DestinationRule(&dummyNode, s)
-		if dr != nil {
-			out.destinationRules[s.Hostname] = dr
-			out.AddConfigDependencies(ConfigKey{
-				Kind:      DestinationRuleKind,
-				Name:      dr.Name,
-				Namespace: dr.Namespace,
-			})
-		}
+		out.destinationRules[s.Hostname] = ps.DestinationRule(&dummyNode, s)
 	}
 
 	if r.OutboundTrafficPolicy == nil {
@@ -464,35 +413,17 @@ func (ilw *IstioEgressListenerWrapper) VirtualServices() []Config {
 	return ilw.virtualServices
 }
 
-// DependsOnConfig determines if the proxy depends on the given config.
-// Returns whether depends on this config or this kind of config is not scoped(unknown to be depended) here.
-func (sc *SidecarScope) DependsOnConfig(config ConfigKey) bool {
+// DependsOnNamespace determines if the Sidecar includes the given namespace.
+func (sc *SidecarScope) DependsOnNamespace(namespace string) bool {
 	if sc == nil {
 		return true
 	}
-	// This kind of config is unknown to sidecarScope.
-	if _, f := sidecarScopeKnownConfigTypes[config.Kind]; !f {
+
+	if _, f := sc.namespaceDependencies[namespace]; f {
 		return true
 	}
 
-	_, exists := sc.configDependencies[config]
-	return exists
-}
-
-// AddConfigDependencies add extra config dependencies to this scope. This action should be done before the
-// SidecarScope being used to avoid concurrent read/write.
-func (sc *SidecarScope) AddConfigDependencies(dependencies ...ConfigKey) {
-	if sc == nil {
-		return
-	}
-
-	if sc.configDependencies == nil {
-		sc.configDependencies = make(map[ConfigKey]struct{})
-	}
-
-	for _, config := range dependencies {
-		sc.configDependencies[config] = struct{}{}
-	}
+	return false
 }
 
 // Given a list of virtual services visible to this namespace,

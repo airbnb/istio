@@ -31,6 +31,7 @@ import (
 	"istio.io/istio/pkg/config/labels"
 	"istio.io/istio/pkg/config/protocol"
 	"istio.io/istio/pkg/config/schema/collections"
+	"istio.io/istio/pkg/config/schema/resource"
 	"istio.io/istio/pkg/config/visibility"
 )
 
@@ -184,12 +185,18 @@ type PushRequest struct {
 	// Full determines whether a full push is required or not. If set to false, only endpoints will be sent.
 	Full bool
 
-	// ConfigsUpdated keeps track of configs that have changed.
+	// NamespacesUpdated contains a list of namespaces whose services/endpoints were changed in the update.
 	// This is used as an optimization to avoid unnecessary pushes to proxies that are scoped with a Sidecar.
+	// Currently, this will only scope EDS updates, as config updates are more complicated.
 	// If this is empty, then all proxies will get an update.
-	// Otherwise only proxies depend on these configs will get an update.
+	// If this is present, then only proxies that import this namespace will get an update
+	NamespacesUpdated map[string]struct{}
+
+	// ConfigsUpdated keeps track of configs that have changed.
+	// The outer map key is the resource kinds changed and the inner map key is the changed
+	// resource names.
 	// The kind of resources are defined in pkg/config/schemas.
-	ConfigsUpdated map[ConfigKey]struct{}
+	ConfigsUpdated map[resource.GroupVersionKind]map[string]struct{}
 
 	// Push stores the push context to use for the update. This may initially be nil, as we will
 	// debounce changes before a PushContext is eventually created.
@@ -226,9 +233,7 @@ const (
 )
 
 var (
-	ServiceEntryKind    = collections.IstioNetworkingV1Alpha3Serviceentries.Resource().GroupVersionKind()
-	VirtualServiceKind  = collections.IstioNetworkingV1Alpha3Virtualservices.Resource().GroupVersionKind()
-	DestinationRuleKind = collections.IstioNetworkingV1Alpha3Destinationrules.Resource().GroupVersionKind()
+	ServiceEntryKind = collections.IstioNetworkingV1Alpha3Serviceentries.Resource().GroupVersionKind()
 )
 
 // Merge two update requests together
@@ -256,12 +261,44 @@ func (first *PushRequest) Merge(other *PushRequest) *PushRequest {
 
 	// Do not merge when any one is empty
 	if len(first.ConfigsUpdated) > 0 && len(other.ConfigsUpdated) > 0 {
-		merged.ConfigsUpdated = make(map[ConfigKey]struct{}, len(first.ConfigsUpdated)+len(other.ConfigsUpdated))
-		for conf := range first.ConfigsUpdated {
-			merged.ConfigsUpdated[conf] = struct{}{}
+		merged.ConfigsUpdated = make(map[resource.GroupVersionKind]map[string]struct{})
+		for kind := range first.ConfigsUpdated {
+			merged.ConfigsUpdated[kind] = make(map[string]struct{})
 		}
-		for conf := range other.ConfigsUpdated {
-			merged.ConfigsUpdated[conf] = struct{}{}
+		for kind := range other.ConfigsUpdated {
+			if _, exists := merged.ConfigsUpdated[kind]; !exists {
+				merged.ConfigsUpdated[kind] = make(map[string]struct{})
+			}
+		}
+
+		if !merged.Full {
+			for kind := range merged.ConfigsUpdated {
+				d1 := first.ConfigsUpdated[kind]
+				d2 := other.ConfigsUpdated[kind]
+
+				for update := range d1 {
+					merged.ConfigsUpdated[kind][update] = struct{}{}
+				}
+
+				for update := range d2 {
+					if _, exists := merged.ConfigsUpdated[kind][update]; !exists {
+						merged.ConfigsUpdated[kind][update] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+
+	// Merge the target namespaces
+	if len(first.NamespacesUpdated) > 0 && len(other.NamespacesUpdated) > 0 {
+		merged.NamespacesUpdated = make(map[string]struct{})
+		for update := range first.NamespacesUpdated {
+			merged.NamespacesUpdated[update] = struct{}{}
+		}
+		for update := range other.NamespacesUpdated {
+			if _, exists := merged.NamespacesUpdated[update]; !exists {
+				merged.NamespacesUpdated[update] = struct{}{}
+			}
 		}
 	}
 
@@ -873,13 +910,13 @@ func (ps *PushContext) updateContext(
 	var servicesChanged, virtualServicesChanged, destinationRulesChanged, gatewayChanged,
 		authnChanged, authzChanged, envoyFiltersChanged, sidecarsChanged, quotasChanged bool
 
-	for conf := range pushReq.ConfigsUpdated {
-		switch conf.Kind {
-		case ServiceEntryKind:
+	for k := range pushReq.ConfigsUpdated {
+		switch k {
+		case collections.IstioNetworkingV1Alpha3Serviceentries.Resource().GroupVersionKind():
 			servicesChanged = true
-		case DestinationRuleKind:
+		case collections.IstioNetworkingV1Alpha3Destinationrules.Resource().GroupVersionKind():
 			destinationRulesChanged = true
-		case VirtualServiceKind:
+		case collections.IstioNetworkingV1Alpha3Virtualservices.Resource().GroupVersionKind():
 			virtualServicesChanged = true
 		case collections.IstioNetworkingV1Alpha3Gateways.Resource().GroupVersionKind():
 			gatewayChanged = true
