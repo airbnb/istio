@@ -63,7 +63,21 @@ func TestCertMtls(t *testing.T) {
 				return checkCACert(ctx, t, testNamespace)
 			}, retry.Delay(time.Second), retry.Timeout(10*time.Second))
 
+			// Enforce strict mTLS for app b
 			var a, b echo.Instance
+			appName := "b"
+			policyYAML := fmt.Sprintf(`apiVersion: "security.istio.io/v1beta1"
+kind: "PeerAuthentication"
+metadata:
+  name: "mtls-strict-for-%v"
+spec:
+  selector:
+    matchLabels:
+      app: "%v"
+  mtls:
+    mode: STRICT
+`, appName, appName)
+			g.ApplyConfigOrFail(t, testNamespace, policyYAML)
 			echoboot.NewBuilderOrFail(ctx, ctx).
 				With(&a, util.EchoConfig("a", testNamespace, false, nil, g, p)).
 				With(&b, util.EchoConfig("b", testNamespace, false, nil, g, p)).
@@ -74,7 +88,7 @@ func TestCertMtls(t *testing.T) {
 			out, err := cert.DumpCertFromSidecar(testNamespace, "app=a", "istio-proxy",
 				connectTarget)
 			if err != nil {
-				t.Errorf("failed to dump certificate: %v", err)
+				t.Errorf("DumpCertFromSidecar() returns an error: %v", err)
 				return
 			}
 			var certExp = regexp.MustCompile("(?sU)-----BEGIN CERTIFICATE-----(.+)-----END CERTIFICATE-----")
