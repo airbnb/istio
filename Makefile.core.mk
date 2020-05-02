@@ -359,10 +359,7 @@ update-golden: refresh-goldens
 
 gen: go-gen mirror-licenses format update-crds operator-proto gen-kustomize update-golden
 
-check-no-modify:
-	@bin/check_no_modify.sh
-
-gen-check: gen check-clean-repo check-no-modify
+gen-check: gen check-clean-repo
 
 # Generate kustomize templates.
 gen-kustomize:
