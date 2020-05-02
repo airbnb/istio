@@ -265,9 +265,7 @@ message EgressGatewayConfig {
 
   TypeSliceOfMapStringInterface additionalContainers = 24;
 
-  google.protobuf.BoolValue runAsRoot = 26;
-
-  // Next available 27.
+  // Next available 26.
 }
 
 
@@ -682,9 +680,7 @@ message IngressGatewayConfig {
 
   string telemetry_domain_name = 43;
 
-  google.protobuf.BoolValue runAsRoot = 45;
-
-  // Next available 46.
+  // Next available 45.
 }
 
 // Secret Discovery Service (SDS) Configuration for ingress gateway.

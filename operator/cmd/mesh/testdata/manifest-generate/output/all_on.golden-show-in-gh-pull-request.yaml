@@ -10173,7 +10173,7 @@ spec:
         - --serviceCluster
         - istio-policy
         - --templateFile
-        - /var/lib/istio/envoy/envoy_policy.yaml.tmpl
+        - /etc/istio/proxy/envoy_policy.yaml.tmpl
         - --controlPlaneAuthPolicy
         - MUTUAL_TLS
         - --trust-domain=cluster.local
