@@ -96,10 +96,7 @@ type Options struct {
 	ProgressLog *util.ProgressLog
 }
 
-var defaultOptions = &Options{
-	Log:         clog.NewDefaultLogger(),
-	ProgressLog: util.NewProgressLog(),
-}
+var defaultOptions = &Options{Log: clog.NewDefaultLogger()}
 
 // NewHelmReconciler creates a HelmReconciler and returns a ptr to it
 func NewHelmReconciler(client client.Client, restConfig *rest.Config, iop *valuesv1alpha1.IstioOperator, opts *Options) (*HelmReconciler, error) {
