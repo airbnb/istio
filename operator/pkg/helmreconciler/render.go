@@ -244,7 +244,7 @@ func (h *HelmReconciler) ProcessManifest(manifests []releaseutil.Manifest) (obje
 			}
 			if err := h.ProcessObject(manifest.Name, obj.UnstructuredObject()); err != nil {
 				scope.Error(err.Error())
-				errs = util.AppendErr(errs, fmt.Errorf("processing manifest %s: %w", manifest.Name, err))
+				errs = util.AppendErr(errs, err)
 				continue
 			}
 			bar.Increment()
@@ -353,11 +353,7 @@ func (h *HelmReconciler) ProcessObject(chartName string, obj *unstructured.Unstr
 	switch {
 	case apierrors.IsNotFound(err):
 		scope.Infof("creating resource: %s", objectStr)
-		err = h.client.Create(context.TODO(), obj)
-		if err != nil {
-			return fmt.Errorf("failed to create %q: %w", objectStr, err)
-		}
-		return nil
+		return h.client.Create(context.TODO(), obj)
 	case err == nil:
 		scope.Infof("updating resource: %s", objectStr)
 		if err := applyOverlay(receiver, obj); err != nil {
