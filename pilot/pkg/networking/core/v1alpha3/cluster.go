@@ -45,6 +45,7 @@ import (
 	"istio.io/istio/pkg/config/constants"
 	"istio.io/istio/pkg/config/host"
 	"istio.io/istio/pkg/config/labels"
+	"istio.io/istio/pkg/config/mesh"
 	"istio.io/istio/pkg/config/protocol"
 	"istio.io/istio/pkg/util/gogo"
 )
@@ -258,7 +259,7 @@ func buildLocalityLbEndpoints(proxy *model.Proxy, push *model.PushContext, proxy
 
 	// Determine whether or not the target service is considered local to the cluster
 	// and should, therefore, not be accessed from outside the cluster.
-	isClusterLocal := push.IsClusterLocal(service)
+	isClusterLocal := mesh.IsClusterLocal(push.Mesh, service.Attributes.Namespace)
 
 	lbEndpoints := make(map[string][]*endpoint.LbEndpoint)
 	for _, instance := range instances {

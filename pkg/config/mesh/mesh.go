@@ -37,6 +37,10 @@ import (
 	"istio.io/istio/pkg/util/gogoprotomarshal"
 )
 
+var (
+	defaultClusterLocalNamespaces = []string{"kube-system"}
+)
+
 // DefaultProxyConfig for individual proxies
 func DefaultProxyConfig() meshconfig.ProxyConfig {
 	if TestMode {
@@ -131,7 +135,7 @@ func DefaultMeshConfig() meshconfig.MeshConfig {
 			EnableAutoMtls:                    &types.BoolValue{Value: false},
 			ThriftConfig:                      &meshconfig.MeshConfig_ThriftConfig{},
 			LocalityLbSetting:                 &v1alpha3.LocalityLoadBalancerSetting{},
-			ServiceSettings:                   []*meshconfig.MeshConfig_ServiceSettings{},
+			ClusterLocalNamespaces:            append(make([]string, 0), defaultClusterLocalNamespaces...),
 		}
 	}
 	// Defaults matching the standard install
@@ -175,8 +179,19 @@ func DefaultMeshConfig() meshconfig.MeshConfig {
 		DefaultDestinationRuleExportTo:    []string{"*"},
 		DnsRefreshRate:                    types.DurationProto(5 * time.Second), // 5 seconds is the default refresh rate used in Envoy
 		ThriftConfig:                      &meshconfig.MeshConfig_ThriftConfig{},
-		ServiceSettings:                   make([]*meshconfig.MeshConfig_ServiceSettings, 0),
+		ClusterLocalNamespaces:            append(make([]string, 0), defaultClusterLocalNamespaces...),
 	}
+
+}
+
+// IsClusterLocal indicates whether the given namespace is configured to be cluster-local.
+func IsClusterLocal(mesh *meshconfig.MeshConfig, namespace string) bool {
+	for _, clusterLocalNS := range mesh.ClusterLocalNamespaces {
+		if namespace == clusterLocalNS {
+			return true
+		}
+	}
+	return false
 }
 
 // ApplyProxyConfig applies the give proxy config yaml to a mesh config object. The passed in mesh config

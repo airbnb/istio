@@ -529,15 +529,9 @@ func newTestEnvironment(serviceDiscovery model.ServiceDiscovery, meshConfig mesh
 	return env
 }
 
-func withClusterLocalHosts(m meshconfig.MeshConfig, hosts ...string) meshconfig.MeshConfig { // nolint:interfacer
-	m.ServiceSettings = append(append(make([]*meshconfig.MeshConfig_ServiceSettings, 0), m.ServiceSettings...),
-		&meshconfig.MeshConfig_ServiceSettings{
-			Settings: &meshconfig.MeshConfig_ServiceSettings_Settings{
-				ClusterLocal: true,
-			},
-			Hosts: hosts,
-		})
-	return m
+func withClusterLocalNamespaces(env *model.Environment, ns ...string) *model.Environment { // nolint:interfacer
+	env.Mesh().ClusterLocalNamespaces = ns
+	return env
 }
 
 func TestBuildSidecarClustersWithIstioMutualAndSNI(t *testing.T) {
@@ -1603,7 +1597,7 @@ func TestBuildLocalityLbEndpoints(t *testing.T) {
 		{
 			name: "cluster local",
 			newEnv: func(sd model.ServiceDiscovery, cs model.IstioConfigStore) *model.Environment {
-				return newTestEnvironment(sd, withClusterLocalHosts(testMesh, "*.example.org"), cs)
+				return withClusterLocalNamespaces(newTestEnvironment(sd, testMesh, cs), "test-ns")
 			},
 			instances: []*model.ServiceInstance{
 				{
