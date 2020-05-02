@@ -243,17 +243,11 @@ func (hostGenerator) principal(key, value string, forTCP bool) (*rbacpb.Principa
 }
 
 type pathGenerator struct {
-	isIstioVersionGE15 bool
 }
 
-func (g pathGenerator) permission(key, value string, forTCP bool) (*rbacpb.Permission, error) {
+func (pathGenerator) permission(key, value string, forTCP bool) (*rbacpb.Permission, error) {
 	if forTCP {
 		return nil, fmt.Errorf("%s must not be used in TCP", key)
-	}
-
-	if !g.isIstioVersionGE15 {
-		m := matcher.HeaderMatcher(":path", value)
-		return permissionHeader(m), nil
 	}
 
 	m := matcher.PathMatcher(value)

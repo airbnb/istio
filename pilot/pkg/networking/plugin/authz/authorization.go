@@ -18,7 +18,6 @@ import (
 	"istio.io/istio/pilot/pkg/model"
 	"istio.io/istio/pilot/pkg/networking"
 	"istio.io/istio/pilot/pkg/networking/plugin"
-	"istio.io/istio/pilot/pkg/networking/util"
 	"istio.io/istio/pilot/pkg/security/authz/builder"
 	"istio.io/istio/pilot/pkg/security/trustdomain"
 	"istio.io/istio/pkg/config/labels"
@@ -81,7 +80,7 @@ func buildFilter(in *plugin.InputParams, mutable *networking.MutableObjects) {
 	tdBundle := trustdomain.NewBundle(spiffe.GetTrustDomain(), in.Push.Mesh.TrustDomainAliases)
 	namespace := in.Node.ConfigNamespace
 	workload := labels.Collection{in.Node.Metadata.Labels}
-	b := builder.New(tdBundle, workload, namespace, in.Push.AuthzPolicies, util.IsIstioVersionGE15(in.Node))
+	b := builder.New(tdBundle, workload, namespace, in.Push.AuthzPolicies)
 	if b == nil {
 		authzLog.Debugf("no authorization policy for workload %v in %s", workload, namespace)
 		return
