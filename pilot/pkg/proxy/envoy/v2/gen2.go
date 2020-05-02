@@ -35,7 +35,7 @@ func (s *DiscoveryServer) handleReqAck(con *XdsConnection, discReq *xdsapi.Disco
 	isAck := true
 
 	t := discReq.TypeUrl
-	con.mu.Lock()
+	con.mu.RLock()
 	w := con.node.Active[t]
 	if w == nil {
 		w = &model.WatchedResource{
@@ -44,7 +44,7 @@ func (s *DiscoveryServer) handleReqAck(con *XdsConnection, discReq *xdsapi.Disco
 		con.node.Active[t] = w
 		isAck = false // newly watched resource
 	}
-	con.mu.Unlock()
+	con.mu.RUnlock()
 
 	if discReq.ErrorDetail != nil {
 		errCode := codes.Code(discReq.ErrorDetail.Code)
@@ -99,14 +99,7 @@ func (s *DiscoveryServer) handleCustomGenerator(con *XdsConnection, req *xdsapi.
 		Nonce:       nonce(push.Version),
 	}
 
-	// XdsResourceGenerator is the default generator for this connection. We want to allow
-	// some types to use custom generators - for example EDS.
-	g := con.node.XdsResourceGenerator
-	if cg, f := s.Generators[con.node.Metadata.Generator+"/"+w.TypeUrl]; f {
-		g = cg
-	}
-
-	cl := g.Generate(con.node, push, w, nil)
+	cl := con.node.XdsResourceGenerator.Generate(con.node, push, w)
 	sz := 0
 	for _, rc := range cl {
 		resp.Resources = append(resp.Resources, rc)
@@ -123,7 +116,6 @@ func (s *DiscoveryServer) handleCustomGenerator(con *XdsConnection, req *xdsapi.
 	w.LastSent = time.Now()
 	w.LastSize = sz // just resource size - doesn't include header and types
 	w.NonceSent = resp.Nonce
-	adsLog.Infof("Pushed %s to %s count=%d size=%d", w.TypeUrl, con.node.ID, len(cl), sz)
 
 	return nil
 }
@@ -133,11 +125,10 @@ func (s *DiscoveryServer) handleCustomGenerator(con *XdsConnection, req *xdsapi.
 
 // Called for config updates.
 // Will not be called if ProxyNeedsPush returns false - ie. if the update
-func (s *DiscoveryServer) pushGeneratorV2(con *XdsConnection, push *model.PushContext,
-	currentVersion string, w *model.WatchedResource, updates model.XdsUpdates) error {
+func (s *DiscoveryServer) pushGeneratorV2(con *XdsConnection, push *model.PushContext, currentVersion string, w *model.WatchedResource) error {
 	// TODO: generators may send incremental changes if both sides agree on the protocol.
 	// This is specific to each generator type.
-	cl := con.node.XdsResourceGenerator.Generate(con.node, push, w, updates)
+	cl := con.node.XdsResourceGenerator.Generate(con.node, push, w)
 	if cl == nil {
 		return nil // No push needed.
 	}
@@ -161,7 +152,7 @@ func (s *DiscoveryServer) pushGeneratorV2(con *XdsConnection, push *model.PushCo
 
 	err := con.send(resp)
 	if err != nil {
-		adsLog.Warnf("ADS: Send failure %s %s: %v", w.TypeUrl, con.ConID, err)
+		adsLog.Warnf("ADS: Send failure %s: %v", con.ConID, err)
 		recordSendError(apiSendErrPushes, err)
 		return err
 	}
@@ -169,6 +160,6 @@ func (s *DiscoveryServer) pushGeneratorV2(con *XdsConnection, push *model.PushCo
 	w.LastSize = sz // just resource size - doesn't include header and types
 	w.NonceSent = resp.Nonce
 
-	adsLog.Infof("XDS: PUSH %s for node:%s resources:%d", w.TypeUrl, con.node.ID, len(cl))
+	adsLog.Infof("XDS: PUSH for node:%s listeners:%d", con.node.ID, len(cl))
 	return nil
 }
