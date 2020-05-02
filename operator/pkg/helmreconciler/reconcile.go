@@ -104,9 +104,6 @@ func NewHelmReconciler(client client.Client, restConfig *rest.Config, iop *value
 	if opts == nil {
 		opts = defaultOptions
 	}
-	if opts.ProgressLog == nil {
-		opts.ProgressLog = util.NewProgressLog()
-	}
 	var cs *kubernetes.Clientset
 	var err error
 	if restConfig != nil {
