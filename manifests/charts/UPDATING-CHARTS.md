@@ -34,14 +34,13 @@ $ make operator-proto
 
 This will regenerate the Go structs used for schema validation.
 
-## Step 4. Update the generated manifests
+## Step 4. Update compiled-in charts
 
-Tests of istioctl use the auto-generated manifests to ensure that the istioctl binary has the correct version of the charts.
-These manifests can be found in [gen-istio.yaml](../charts/istio-control/istio-discovery/files/gen-istio.yaml).
-To regenerate the manifests, run:
+Tests of istioctl use the compiled-in charts to ensure that the istioctl binary has the correct version of the charts.
+To regenerate the charts package, run:
 
 ```bash
-$ make gen
+$ make gen-charts
 ```
 
 ## Step 5. Update golden files
