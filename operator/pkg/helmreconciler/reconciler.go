@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"helm.sh/helm/v3/pkg/releaseutil"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -145,8 +146,8 @@ func (h *HelmReconciler) processRecursive(manifests name.ManifestMap) *v1alpha1.
 			status := v1alpha1.InstallStatus_NONE
 			var err error
 			if len(ms) != 0 {
-				m := name.Manifest{
-					Name:    c,
+				m := releaseutil.Manifest{
+					Name:    string(c),
 					Content: name.MergeManifestSlices(ms),
 				}
 				processedObjs, deployedObjects, err = h.ApplyManifest(m, len(ComponentDependencies[c]) > 0)

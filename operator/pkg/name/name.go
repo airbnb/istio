@@ -110,10 +110,7 @@ var (
 
 	// ValuesEnablementPathMap defines a mapping between legacy values enablement paths and the corresponding enablement
 	// paths in IstioOperator.
-	ValuesEnablementPathMap = map[string]string{
-		"spec.values.gateways.istio-ingressgateway.enabled": "spec.components.ingressGateways.[name:istio-ingressgateway].enabled",
-		"spec.values.gateways.istio-egressgateway.enabled":  "spec.components.egressGateways.[name:istio-egressgateway].enabled",
-	}
+	ValuesEnablementPathMap = make(map[string]string)
 
 	scanAddons sync.Once
 )
@@ -125,12 +122,7 @@ func init() {
 	if err := loadComponentNamesConfig(); err != nil {
 		panic(err)
 	}
-}
-
-// Manifest defines a manifest for a component.
-type Manifest struct {
-	Name    ComponentName
-	Content string
+	generateValuesEnablementMap()
 }
 
 // ManifestMap is a map of ComponentName to its manifest string.
@@ -238,11 +230,13 @@ func loadComponentNamesConfig() error {
 	return nil
 }
 
-// onceErr is used to report any error returned through once. It must be globally scoped.
+func generateValuesEnablementMap() {
+	ValuesEnablementPathMap["spec.values.gateways.istio-ingressgateway.enabled"] = "spec.components.ingressGateways.[name:istio-ingressgateway].enabled"
+	ValuesEnablementPathMap["spec.values.gateways.istio-egressgateway.enabled"] = "spec.components.egressGateways.[name:istio-egressgateway].enabled"
+}
+
 var onceErr error
 
-// ScanBundledAddonComponents scans the specified directory for addons distributed with Istio and dynamically creates
-// a map that can be used to refer to these component names through an API with dynamic values.
 func ScanBundledAddonComponents(chartsRootDir string) error {
 	scanAddons.Do(func() {
 		if chartsRootDir == "" {
