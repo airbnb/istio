@@ -41,6 +41,10 @@ var _ Instance = &nativeComponent{}
 var _ io.Closer = &nativeComponent{}
 var _ Native = &nativeComponent{}
 
+var (
+	pilotCertDir = env.IstioSrc + "/tests/testdata/certs/pilot"
+)
+
 // Native is the interface for an native pilot server.
 type Native interface {
 	Instance
@@ -71,6 +75,10 @@ func newNative(ctx resource.Context, cfg Config) (Instance, error) {
 		config:      cfg,
 	}
 	instance.id = ctx.TrackResource(instance)
+
+	// Override the default pilot cert dir.
+	// TODO(nmittler): We should eventually replace this hack.
+	bootstrap.PilotCertDir = pilotCertDir
 
 	// Dynamically assign all ports.
 	options := bootstrap.DiscoveryServiceOptions{

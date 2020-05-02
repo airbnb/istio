@@ -79,6 +79,10 @@ var (
 		plugin.Health,
 		plugin.Mixer,
 	}
+
+	// PilotCertDir is the default location for mTLS certificates used by pilot
+	// Visible for tests - at runtime can be set by PILOT_CERT_DIR environment variable.
+	PilotCertDir = "/etc/certs/"
 )
 
 func init() {
