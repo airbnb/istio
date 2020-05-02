@@ -78,7 +78,7 @@ func TestOperatorInit(t *testing.T) {
 	}
 
 	l := clog.NewConsoleLogger(os.Stdout, os.Stderr, installerScope)
-	_, gotYAML, err := renderOperatorManifest(rootArgs, &oiArgs.common)
+	_, gotYAML, err := renderOperatorManifest(rootArgs, &oiArgs.common, l)
 	if err != nil {
 		l.LogAndFatal(err)
 	}

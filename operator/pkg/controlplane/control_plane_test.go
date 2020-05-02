@@ -19,11 +19,12 @@ import (
 	"reflect"
 	"testing"
 
+	"istio.io/istio/operator/pkg/util"
+
 	"istio.io/api/operator/v1alpha1"
 	"istio.io/istio/operator/pkg/component"
 	"istio.io/istio/operator/pkg/name"
 	"istio.io/istio/operator/pkg/translate"
-	"istio.io/istio/operator/pkg/util"
 )
 
 func TestOrderedKeys(t *testing.T) {
@@ -68,7 +69,7 @@ func TestNewIstioOperator(t *testing.T) {
 		desc              string
 		inInstallSpec     *v1alpha1.IstioOperatorSpec
 		inTranslator      *translate.Translator
-		wantIstioOperator *IstioControlPlane
+		wantIstioOperator *IstioOperator
 		wantErr           error
 	}{
 		{
@@ -82,7 +83,7 @@ func TestNewIstioOperator(t *testing.T) {
 				},
 			},
 			wantErr: nil,
-			wantIstioOperator: &IstioControlPlane{
+			wantIstioOperator: &IstioOperator{
 				components: []component.IstioComponent{
 					&component.CRDComponent{
 						CommonComponentFields: &component.CommonComponentFields{
@@ -121,8 +122,8 @@ func TestNewIstioOperator(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			gotOperator, err := NewIstioControlPlane(tt.inInstallSpec, tt.inTranslator)
-			if ((err != nil && tt.wantErr == nil) || (err == nil && tt.wantErr != nil)) || !gotOperator.componentsEqual(tt.wantIstioOperator.components) {
+			gotOperator, err := NewIstioOperator(tt.inInstallSpec, tt.inTranslator)
+			if ((err != nil && tt.wantErr == nil) || (err == nil && tt.wantErr != nil)) || !gotOperator.ComponentsEqual(tt.wantIstioOperator.components) {
 				t.Errorf("%s: wanted components & err %+v %v, got components & err %+v %v",
 					tt.desc, tt.wantIstioOperator.components, tt.wantErr, gotOperator.components, err)
 			}
@@ -137,13 +138,13 @@ func TestIstioOperator_RenderManifest(t *testing.T) {
 	}
 	tests := []struct {
 		desc          string
-		testOperator  *IstioControlPlane
+		testOperator  *IstioOperator
 		wantManifests name.ManifestMap
 		wantErrs      util.Errors
 	}{
 		{
 			desc: "components-not-started-operator-started",
-			testOperator: &IstioControlPlane{
+			testOperator: &IstioOperator{
 				components: []component.IstioComponent{
 					&component.CRDComponent{
 						CommonComponentFields: &component.CommonComponentFields{
@@ -193,7 +194,7 @@ func TestIstioOperator_RenderManifest(t *testing.T) {
 		},
 		{
 			desc: "operator-not-started",
-			testOperator: &IstioControlPlane{
+			testOperator: &IstioOperator{
 				components: []component.IstioComponent{
 					&component.CRDComponent{
 						CommonComponentFields: &component.CommonComponentFields{
