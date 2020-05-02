@@ -35,7 +35,7 @@ data:
     disableMixerHttpReports: true
     disablePolicyChecks: true
     enableAutoMtls: true
-    enablePrometheusMerge: true
+    enablePrometheusMerge: false
     enableTracing: true
     ingressClass: istio
     ingressControllerMode: STRICT

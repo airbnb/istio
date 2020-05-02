@@ -46,7 +46,7 @@ var (
 func runCommand(command string) (string, error) {
 	var out bytes.Buffer
 	rootCmd := GetRootCmd(strings.Split(command, " "))
-	rootCmd.SetOut(&out)
+	rootCmd.SetOutput(&out)
 
 	err := rootCmd.Execute()
 	return out.String(), err
