@@ -735,15 +735,8 @@ func (s *Server) initEventHandlers() error {
 			Reason: []model.TriggerReason{model.ServiceUpdate},
 		})
 	}
-	for _, registry := range s.ServiceController().GetRegistries() {
-		// Skip kubernetes and external registries as they are handled separately
-		if registry.Provider() == serviceregistry.Kubernetes ||
-			registry.Provider() == serviceregistry.External {
-			continue
-		}
-		if err := registry.AppendInstanceHandler(instanceHandler); err != nil {
-			return fmt.Errorf("append instance handler to registry %s failed: %v", registry.Provider(), err)
-		}
+	if err := s.ServiceController().AppendInstanceHandler(instanceHandler); err != nil {
+		return fmt.Errorf("append instance handler failed: %v", err)
 	}
 
 	if s.configController != nil {
