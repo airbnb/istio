@@ -1,5 +1,6 @@
 ---
 # Source: istio-discovery/templates/poddisruptionbudget.yaml
+
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
@@ -8,7 +9,7 @@ metadata:
   labels:
     app: istiod
     istio.io/rev: default
-    release: istio
+    release: istio-base
     istio: pilot
 spec:
   minAvailable: 1
@@ -17,7 +18,13 @@ spec:
       app: istiod
       istio: pilot
 ---
+
+---
 # Source: istio-discovery/templates/configmap.yaml
+
+
+
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -25,7 +32,7 @@ metadata:
   namespace: istio-system
   labels:
     istio.io/rev: default
-    release: istio
+    release: istio-base
 data:
 
   # Configuration file for the mesh networks to be used by the Split Horizon EDS.
@@ -70,8 +77,12 @@ data:
     sdsUdsPath: unix:/etc/istio/proxy/SDS
     trustDomain: cluster.local
     trustDomainAliases: null
+    
+---
+
 ---
 # Source: istio-discovery/templates/istiod-injector-configmap.yaml
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -79,7 +90,7 @@ metadata:
   namespace: istio-system
   labels:
     istio.io/rev: default
-    release: istio
+    release: istio-base
 data:
 
   values: |-
@@ -716,6 +727,7 @@ data:
         traffic.sidecar.istio.io/excludeOutboundPorts: "{{ annotation .ObjectMeta `traffic.sidecar.istio.io/excludeOutboundPorts` .Values.global.proxy.excludeOutboundPorts }}"
       {{- end }}
         traffic.sidecar.istio.io/kubevirtInterfaces: "{{ index .ObjectMeta.Annotations `traffic.sidecar.istio.io/kubevirtInterfaces` }}"
+
 ---
 # Source: istio-discovery/templates/service.yaml
 apiVersion: v1
@@ -727,7 +739,7 @@ metadata:
     istio.io/rev: default
     app: istiod
     istio: pilot
-    release: istio
+    release: istio-base
 spec:
   ports:
     - port: 15010
@@ -753,6 +765,8 @@ spec:
     # This avoids default deployment picking the canary
     istio: pilot
 ---
+
+---
 # Source: istio-discovery/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -763,7 +777,7 @@ metadata:
     app: istiod
     istio.io/rev: default
     istio: pilot
-    release: istio
+    release: istio-base
 spec:
   strategy:
     rollingUpdate:
@@ -896,7 +910,10 @@ spec:
         configMap:
           name: istio
 ---
+
+---
 # Source: istio-discovery/templates/autoscale.yaml
+
 apiVersion: autoscaling/v2beta1
 kind: HorizontalPodAutoscaler
 metadata:
@@ -904,7 +921,7 @@ metadata:
   namespace: istio-system
   labels:
     app: istiod
-    release: istio
+    release: istio-base
     istio.io/rev: default
 spec:
   maxReplicas: 5
@@ -919,7 +936,9 @@ spec:
       name: cpu
       targetAverageUtilization: 80
 ---
+---
 # Source: istio-discovery/templates/telemetryv2_1.4.yaml
+
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -950,7 +969,6 @@ spec:
                 code:
                   inline_string: envoy.wasm.metadata_exchange
 ---
-# Source: istio-discovery/templates/telemetryv2_1.4.yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -1046,7 +1064,10 @@ spec:
                 code:
                   inline_string: envoy.wasm.stats
 ---
+
+---
 # Source: istio-discovery/templates/telemetryv2_1.5.yaml
+
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -1081,7 +1102,6 @@ spec:
                     local:
                       inline_string: envoy.wasm.metadata_exchange
 ---
-# Source: istio-discovery/templates/telemetryv2_1.5.yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -1136,7 +1156,6 @@ spec:
               value:
                 protocol: istio-peer-exchange
 ---
-# Source: istio-discovery/templates/telemetryv2_1.5.yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -1244,7 +1263,6 @@ spec:
                     local:
                       inline_string: envoy.wasm.stats
 ---
-# Source: istio-discovery/templates/telemetryv2_1.5.yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -1345,7 +1363,10 @@ spec:
                     local:
                       inline_string: "envoy.wasm.stats"
 ---
+
+---
 # Source: istio-discovery/templates/telemetryv2_1.6.yaml
+
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -1380,7 +1401,6 @@ spec:
                     local:
                       inline_string: envoy.wasm.metadata_exchange
 ---
-# Source: istio-discovery/templates/telemetryv2_1.6.yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -1438,7 +1458,6 @@ spec:
               value:
                 protocol: istio-peer-exchange
 ---
-# Source: istio-discovery/templates/telemetryv2_1.6.yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -1546,7 +1565,6 @@ spec:
                     local:
                       inline_string: envoy.wasm.stats
 ---
-# Source: istio-discovery/templates/telemetryv2_1.6.yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -1647,6 +1665,8 @@ spec:
                     local:
                       inline_string: "envoy.wasm.stats"
 ---
+
+---
 # Source: istio-discovery/templates/mutatingwebhook.yaml
 # Installed for each revision - not installed for cluster resources ( cluster roles, bindings, crds)
 apiVersion: admissionregistration.k8s.io/v1beta1
@@ -1657,7 +1677,7 @@ metadata:
   labels:
     istio.io/rev: default
     app: sidecar-injector
-    release: istio
+    release: istio-base
 webhooks:
   - name: sidecar-injector.istio.io
     clientConfig:
@@ -1675,3 +1695,8 @@ webhooks:
     namespaceSelector:
       matchLabels:
         istio-injection: enabled
+
+---
+# Source: istio-discovery/templates/configmap-jwks.yaml
+
+
