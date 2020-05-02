@@ -61,15 +61,24 @@ var (
 )
 
 // FlushObjectCaches flushes all K8s object caches.
-func FlushObjectCaches() {
+func (h *HelmReconciler) FlushObjectCaches() {
 	objectCachesMu.Lock()
 	defer objectCachesMu.Unlock()
 	objectCaches = make(map[string]*ObjectCache)
 }
 
-func (h *HelmReconciler) RenderCharts() (ChartManifestsMap, error) {
-	iopSpec := h.iop.Spec
+func (h *HelmReconciler) RenderCharts(in RenderingInput) (ChartManifestsMap, error) {
+	iop, ok := in.GetInputConfig().(*valuesv1alpha1.IstioOperator)
+	if !ok {
+		return nil, fmt.Errorf("unexpected type %T in RenderCharts", in.GetInputConfig())
+	}
+	iopSpec := iop.Spec
 	if err := validate.CheckIstioOperatorSpec(iopSpec, false); err != nil {
+		return nil, err
+	}
+
+	mergedIOPS, err := MergeIOPSWithProfile(iop)
+	if err != nil {
 		return nil, err
 	}
 
@@ -78,12 +87,12 @@ func (h *HelmReconciler) RenderCharts() (ChartManifestsMap, error) {
 		return nil, err
 	}
 
-	cp, err := controlplane.NewIstioOperator(iopSpec, t)
+	cp, err := controlplane.NewIstioOperator(mergedIOPS, t)
 	if err != nil {
 		return nil, err
 	}
 	if err := cp.Run(); err != nil {
-		return nil, fmt.Errorf("failed to create Istio control plane with spec: \n%v\nerror: %s", iopSpec, err)
+		return nil, fmt.Errorf("failed to create Istio control plane with spec: \n%v\nerror: %s", mergedIOPS, err)
 	}
 
 	manifests, errs := cp.RenderManifest()
@@ -91,13 +100,7 @@ func (h *HelmReconciler) RenderCharts() (ChartManifestsMap, error) {
 		err = errs.ToError()
 	}
 
-	h.manifests = manifests
-
 	return toChartManifestsMap(manifests), err
-}
-
-func (h *HelmReconciler) GetManifests() name.ManifestMap {
-	return h.manifests
 }
 
 // MergeIOPSWithProfile overlays the values in iop on top of the defaults for the profile given by iop.profile and
@@ -156,17 +159,17 @@ func MergeIOPSWithProfile(iop *valuesv1alpha1.IstioOperator) (*v1alpha1.IstioOpe
 }
 
 // ProcessManifest apply the manifest to create or update resources, returns the number of objects processed
-func (h *HelmReconciler) ProcessManifest(manifest manifest.Manifest) (object.K8sObjects, error) {
-	var errs util.Errors
-	objAccessor, err := meta.Accessor(h.iop)
+func (h *HelmReconciler) ProcessManifest(manifest manifest.Manifest) (int, error) {
+	var errs []error
+	objAccessor, err := meta.Accessor(h.instance)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	crName := objAccessor.GetName() + "-" + manifest.Name
 	log.Infof("Processing resources from manifest: %s for CR %s", manifest.Name, crName)
 	allObjects, err := object.ParseK8sObjectsFromYAMLManifest(manifest.Content)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	objectCachesMu.Lock()
@@ -190,7 +193,7 @@ func (h *HelmReconciler) ProcessManifest(manifest manifest.Manifest) (object.K8s
 	// No further locking required beyond this point, since we have a ptr to a cache corresponding to a CR crName and no
 	// other controller is allowed to work on at the same time.
 	var deployedObjects int
-	var changedObjects, processedObjects object.K8sObjects
+	var changedObjects object.K8sObjects
 	var changedObjectKeys []string
 	allObjectsMap := make(map[string]bool)
 
@@ -218,10 +221,10 @@ func (h *HelmReconciler) ProcessManifest(manifest manifest.Manifest) (object.K8s
 		err = h.ProcessObject(manifest.Name, obj.UnstructuredObject())
 		if err != nil {
 			log.Error(err.Error())
-			errs = util.AppendErr(errs, err)
+			errs = append(errs, err)
 			continue
 		}
-		processedObjects = append(processedObjects, obj)
+		deployedObjects++
 		// Update the cache with the latest object.
 		objectCache.cache[obj.Hash()] = obj
 	}
@@ -238,41 +241,12 @@ func (h *HelmReconciler) ProcessManifest(manifest manifest.Manifest) (object.K8s
 		delete(objectCache.cache, k)
 	}
 
-	if len(errs) != 0 {
-		log.Infof("✘ Component %s installation had errors: \n%s\n", manifest.Name, util.ToString(errs.Dedup(), "\n"))
-		return processedObjects, errs.ToError()
-	}
-	if len(allObjects) != 0 {
-		log.Infof("✔ Component %s installed.", manifest.Name)
-	}
-
-	return processedObjects, nil
-}
-
-// applyLabelsAndAnnotations applies owner labels and annotations to the object.
-func applyLabelsAndAnnotations(p PruningDetails, obj runtime.Object) error {
-	for key, value := range p.GetOwnerLabels() {
-		err := util.SetLabel(obj, key, value)
-		if err != nil {
-			return err
-		}
-	}
-	for key, value := range p.GetOwnerAnnotations() {
-		err := util.SetAnnotation(obj, key, value)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return deployedObjects, utilerrors.NewAggregate(errs)
 }
 
 // ProcessObject creates or updates an object in the API server depending on whether it already exists.
 // It mutates obj.
 func (h *HelmReconciler) ProcessObject(chartName string, obj *unstructured.Unstructured) error {
-	if err := applyLabelsAndAnnotations(h.pruningDetails, obj); err != nil {
-		return err
-	}
-
 	if obj.GetKind() == "List" {
 		allErrors := []error{}
 		list, err := obj.ToList()
@@ -289,28 +263,27 @@ func (h *HelmReconciler) ProcessObject(chartName string, obj *unstructured.Unstr
 		return utilerrors.NewAggregate(allErrors)
 	}
 
-	if err := util2.CreateApplyAnnotation(obj, unstructured.UnstructuredJSONScheme); err != nil {
+	mutatedObj, err := h.customizer.Listener().BeginResource(chartName, obj)
+	if err != nil {
+		log.Errorf("error preprocessing object: %s", err)
+		return err
+	}
+
+	err = util2.CreateApplyAnnotation(obj, unstructured.UnstructuredJSONScheme)
+	if err != nil {
 		log.Errorf("unexpected error adding apply annotation to object: %s", err)
 	}
 
 	receiver := &unstructured.Unstructured{}
-	receiver.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
-	objectKey, _ := client.ObjectKeyFromObject(obj)
-	objectStr := fmt.Sprintf("%s/%s/%s", obj.GetKind(), obj.GetNamespace(), obj.GetName())
+	receiver.SetGroupVersionKind(mutatedObj.GetObjectKind().GroupVersionKind())
+	objectKey, _ := client.ObjectKeyFromObject(mutatedObj)
 
-	if h.opts.DryRun {
-		log.Infof("Not applying object %s because of dry run.", objectStr)
-		return nil
-	}
-
-	err := h.client.Get(context.TODO(), objectKey, receiver)
-	switch {
-	case apierrors.IsNotFound(err):
-		log.Infof("creating resource: %s", objectStr)
-		return h.client.Create(context.TODO(), obj)
-	case err == nil:
-		log.Infof("updating resource: %s", objectStr)
-		if err := applyOverlay(receiver, obj); err != nil {
+	if err = h.client.Get(context.TODO(), objectKey, receiver); apierrors.IsNotFound(err) {
+		log.Infof("creating resource: %s/%s/%s", obj.GetKind(), obj.GetNamespace(), obj.GetName())
+		return h.client.Create(context.TODO(), mutatedObj)
+	} else if err == nil {
+		log.Infof("updating resource: %s/%s/%s", obj.GetKind(), obj.GetNamespace(), obj.GetName())
+		if err := applyOverlay(receiver, mutatedObj); err != nil {
 			return err
 		}
 		return h.client.Update(context.TODO(), receiver)

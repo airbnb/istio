@@ -14,20 +14,14 @@
 
 package util
 
-import (
-	"fmt"
-)
-
-const (
-	defaultSeparator = ", "
-)
+import "fmt"
 
 // Errors is a slice of error.
 type Errors []error
 
 // Error implements the error#Error method.
 func (e Errors) Error() string {
-	return ToString(e, defaultSeparator)
+	return ToString([]error(e))
 }
 
 // String implements the stringer#String method.
@@ -41,39 +35,6 @@ func (e Errors) ToError() error {
 		return nil
 	}
 	return fmt.Errorf("%s", e)
-}
-
-// Dedup removes any duplicated errors.
-func (e Errors) Dedup() Errors {
-	logCountMap := make(map[string]int)
-	for _, ee := range e {
-		if ee == nil {
-			continue
-		}
-		item := ee.Error()
-		_, exist := logCountMap[item]
-		if exist {
-			logCountMap[item]++
-		} else {
-			logCountMap[item] = 1
-		}
-	}
-	var out Errors
-	for _, ee := range e {
-		item := ee.Error()
-		count := logCountMap[item]
-		if count == 0 {
-			continue
-		}
-		times := ""
-		if count > 1 {
-			times = fmt.Sprintf(" (repeated %d times)", count)
-		}
-		out = AppendErr(out, fmt.Errorf("%s%s", ee, times))
-		// reset seen log count
-		logCountMap[item] = 0
-	}
-	return out
 }
 
 // NewErrs returns a slice of error with a single element err.
@@ -112,16 +73,16 @@ func AppendErrs(errors []error, newErrs []error) Errors {
 	return errors
 }
 
-// ToString returns a string representation of errors, with elements separated by separator string. Any nil errors in the
+// ToString returns a string representation of errors. Any nil errors in the
 // slice are skipped.
-func ToString(errors []error, separator string) string {
+func ToString(errors []error) string {
 	var out string
 	for i, e := range errors {
 		if e == nil {
 			continue
 		}
 		if i != 0 {
-			out += separator
+			out += ", "
 		}
 		out += e.Error()
 	}
