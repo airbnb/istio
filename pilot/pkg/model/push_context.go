@@ -1592,10 +1592,12 @@ func getGatewayAddresses(gw *meshconfig.Network_IstioNetworkGateway, registryNam
 		if svc == nil {
 			return nil
 		}
-		// No need lock here as the service returned is a new one
+		svc.Mutex.RLock()
+		defer svc.Mutex.RLock()
 		if svc.Attributes.ClusterExternalAddresses != nil {
 			var gateways []*Gateway
 			for _, clusterName := range registryNames {
+				ips := svc.Attributes.ClusterExternalAddresses[clusterName]
 				remotePort := gw.Port
 				// check if we have node port mappings
 				if svc.Attributes.ClusterExternalPorts != nil {
@@ -1607,7 +1609,6 @@ func getGatewayAddresses(gw *meshconfig.Network_IstioNetworkGateway, registryNam
 						}
 					}
 				}
-				ips := svc.Attributes.ClusterExternalAddresses[clusterName]
 				for _, ip := range ips {
 					gateways = append(gateways, &Gateway{ip, remotePort})
 				}

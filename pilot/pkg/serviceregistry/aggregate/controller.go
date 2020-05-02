@@ -174,31 +174,31 @@ func (c *Controller) GetService(hostname host.Name) (*model.Service, error) {
 			// VIPs or CIDR ranges in the address field
 			return service, nil
 		}
-
 		// This is K8S typically
 		if out == nil {
-			out = service.DeepCopy()
+			out = service
 		} else {
+			// TODO(hzxuzhonghu): This kind of lock is really tricky and error prone, need to refactor.
+			out.Mutex.Lock()
 			service.Mutex.RLock()
-			// ClusterExternalAddresses and ClusterExternalPorts are only used for getting gateway address
-			externalAddrs := service.Attributes.ClusterExternalAddresses[r.Cluster()]
-			if len(externalAddrs) > 0 {
+			// ClusterExternalAddresses and ClusterExternalAddresses are only used for getting gateway address
+			if len(service.Attributes.ClusterExternalAddresses[r.Cluster()]) > 0 {
 				if out.Attributes.ClusterExternalAddresses == nil {
 					out.Attributes.ClusterExternalAddresses = make(map[string][]string)
 				}
-				out.Attributes.ClusterExternalAddresses[r.Cluster()] = externalAddrs
+				out.Attributes.ClusterExternalAddresses[r.Cluster()] = service.Attributes.ClusterExternalAddresses[r.Cluster()]
 			}
-			externalPorts := service.Attributes.ClusterExternalPorts[r.Cluster()]
-			if len(externalPorts) > 0 {
+			if len(service.Attributes.ClusterExternalPorts[r.Cluster()]) > 0 {
 				if out.Attributes.ClusterExternalPorts == nil {
 					out.Attributes.ClusterExternalPorts = make(map[string]map[uint32]uint32)
 				}
-				out.Attributes.ClusterExternalPorts[r.Cluster()] = externalPorts
+				out.Attributes.ClusterExternalPorts[r.Cluster()] = service.Attributes.ClusterExternalPorts[r.Cluster()]
 			}
 			service.Mutex.RUnlock()
+			out.Mutex.Unlock()
 		}
 	}
-	return out, errs
+	return nil, errs
 }
 
 // ManagementPorts retrieves set of health check ports by instance IP
