@@ -86,16 +86,18 @@ func (l *DefaultLogger) PrintErr(s string) {
 
 //ConsoleLogger is the struct used for mesh command
 type ConsoleLogger struct {
-	stdOut io.Writer
-	stdErr io.Writer
+	logToStdErr bool
+	stdOut      io.Writer
+	stdErr      io.Writer
 }
 
 // NewConsoleLogger creates a new logger and returns a pointer to it.
 // stdOut and stdErr can be used to capture output for testing.
-func NewConsoleLogger(stdOut, stdErr io.Writer) *ConsoleLogger {
+func NewConsoleLogger(logToStdErr bool, stdOut, stdErr io.Writer) *ConsoleLogger {
 	return &ConsoleLogger{
-		stdOut: stdOut,
-		stdErr: stdErr,
+		logToStdErr: logToStdErr,
+		stdOut:      stdOut,
+		stdErr:      stdErr,
 	}
 }
 
@@ -104,8 +106,11 @@ func (l *ConsoleLogger) LogAndPrint(v ...interface{}) {
 		return
 	}
 	s := fmt.Sprint(v...)
-	l.Print(s + "\n")
-	log.Infof(s)
+	if !l.logToStdErr {
+		l.Print(s + "\n")
+	} else {
+		log.Infof(s)
+	}
 }
 
 func (l *ConsoleLogger) LogAndError(v ...interface{}) {
@@ -113,8 +118,11 @@ func (l *ConsoleLogger) LogAndError(v ...interface{}) {
 		return
 	}
 	s := fmt.Sprint(v...)
-	l.PrintErr(s + "\n")
-	log.Infof(s)
+	if !l.logToStdErr {
+		l.PrintErr(s + "\n")
+	} else {
+		log.Infof(s)
+	}
 }
 
 func (l *ConsoleLogger) LogAndFatal(a ...interface{}) {
@@ -124,14 +132,20 @@ func (l *ConsoleLogger) LogAndFatal(a ...interface{}) {
 
 func (l *ConsoleLogger) LogAndPrintf(format string, a ...interface{}) {
 	s := fmt.Sprintf(format, a...)
-	l.Print(s + "\n")
-	log.Infof(s)
+	if !l.logToStdErr {
+		l.Print(s + "\n")
+	} else {
+		log.Infof(s)
+	}
 }
 
 func (l *ConsoleLogger) LogAndErrorf(format string, a ...interface{}) {
 	s := fmt.Sprintf(format, a...)
-	l.PrintErr(s + "\n")
-	log.Infof(s)
+	if !l.logToStdErr {
+		l.PrintErr(s + "\n")
+	} else {
+		log.Infof(s)
+	}
 }
 
 func (l *ConsoleLogger) LogAndFatalf(format string, a ...interface{}) {

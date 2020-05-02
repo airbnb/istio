@@ -40,6 +40,8 @@ This flag can be specified multiple times to overlay multiple files. Multiple fi
 )
 
 type rootArgs struct {
+	// logToStdErr controls whether logs are sent to stderr.
+	logToStdErr bool
 	// Dry run performs all steps except actually applying the manifests or creating output dirs/files.
 	dryRun bool
 	// Verbose controls whether additional debug output is displayed and logged.
@@ -47,6 +49,8 @@ type rootArgs struct {
 }
 
 func addFlags(cmd *cobra.Command, rootArgs *rootArgs) {
+	cmd.PersistentFlags().BoolVarP(&rootArgs.logToStdErr, "logtostderr", "",
+		false, "Send logs to stderr.")
 	cmd.PersistentFlags().BoolVarP(&rootArgs.dryRun, "dry-run", "",
 		false, "Console/log output only, make no changes.")
 	cmd.PersistentFlags().BoolVarP(&rootArgs.verbose, "verbose", "",
