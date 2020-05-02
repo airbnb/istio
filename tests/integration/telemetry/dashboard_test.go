@@ -245,7 +245,7 @@ spec:
     hosts:
     - "*"
   - port:
-      number: 31400
+      number: 15029
       name: tcp
       protocol: TCP
     hosts:
@@ -271,7 +271,7 @@ spec:
           number: 80
   tcp:
   - match:
-    - port: 31400
+    - port: 15029
     route:
     - destination:
         host: server
