@@ -31,7 +31,6 @@ import (
 	"istio.io/istio/operator/pkg/name"
 	"istio.io/istio/operator/pkg/object"
 	"istio.io/istio/operator/pkg/util"
-	"istio.io/istio/operator/pkg/util/progress"
 )
 
 // ApplyManifest applies the manifest to create or update resources. It returns the processed (created or updated)
@@ -78,7 +77,7 @@ func (h *HelmReconciler) ApplyManifest(manifest name.Manifest, waitUntilReady bo
 		changedObjectKeys = append(changedObjectKeys, oh)
 	}
 
-	var plog *progress.ManifestLog
+	var plog *util.ManifestLog
 	if len(changedObjectKeys) > 0 {
 		plog = h.opts.ProgressLog.NewComponent(cname)
 		scope.Infof("The following objects differ between generated manifest and cache: \n - %s", strings.Join(changedObjectKeys, "\n - "))

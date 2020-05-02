@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package progress
+package util
 
 import (
 	"fmt"
@@ -22,8 +22,6 @@ import (
 	"sync"
 
 	"github.com/cheggaaa/pb/v3"
-
-	"istio.io/istio/operator/pkg/name"
 )
 
 type InstallState int
@@ -34,11 +32,11 @@ const (
 	StateComplete
 )
 
-// Log records the progress of an installation
+// ProgressLog records the progress of an installation
 // This aims to provide information about the install of multiple components in parallel, while working
 // around the limitations of the pb library, which will only support single lines. To do this, we aggregate
 // the current components into a single line, and as components complete there final state is persisted to a new line.
-type Log struct {
+type ProgressLog struct {
 	components map[string]*ManifestLog
 	bar        *pb.ProgressBar
 	template   string
@@ -46,8 +44,8 @@ type Log struct {
 	state      InstallState
 }
 
-func NewLog() *Log {
-	return &Log{
+func NewProgressLog() *ProgressLog {
+	return &ProgressLog{
 		components: map[string]*ManifestLog{},
 		bar:        createBar(),
 	}
@@ -57,16 +55,16 @@ const inProgress = `{{ yellow (cycle . "-" "-" "-" " ") }} `
 
 // createStatus will return a string to report the current status.
 // ex: - Processing resources for components. Waiting for foo, bar
-func (p *Log) createStatus(maxWidth int) string {
+func (p *ProgressLog) createStatus(maxWidth int) string {
 	comps := []string{}
 	wait := []string{}
 	for c, l := range p.components {
-		comps = append(comps, name.UserFacingComponentName(name.ComponentName(c)))
+		comps = append(comps, c)
 		wait = append(wait, l.waiting...)
 	}
 	sort.Strings(comps)
 	sort.Strings(wait)
-	msg := fmt.Sprintf(`Processing resources for %s.`, strings.Join(comps, ", "))
+	msg := fmt.Sprintf(`Processing resources for components %s.`, strings.Join(comps, ", "))
 	if len(wait) > 0 {
 		msg += fmt.Sprintf(` Waiting for %s`, strings.Join(wait, ", "))
 	}
@@ -108,18 +106,17 @@ func createBar() *pb.ProgressBar {
 // progress into a single line. For example "Waiting for x, y, z". Once a component completes, we want
 // a new line created so the information is not lost. To do this, we spin up a new bar with the remaining components
 // on a new line, and create a new bar. For example, this becomes "x succeeded", "waiting for y, z".
-func (p *Log) reportProgress(component string) func() {
+func (p *ProgressLog) reportProgress(component string) func() {
 	return func() {
-		cliName := name.UserFacingComponentName(name.ComponentName(component))
 		p.mu.Lock()
 		defer p.mu.Unlock()
 		cmp := p.components[component]
 		// The component has completed
 		if cmp.finished || cmp.err != "" {
 			if cmp.finished {
-				p.SetMessage(fmt.Sprintf(`{{ green "✔" }} %s installed`, cliName), true)
+				p.SetMessage(fmt.Sprintf(`{{ green "✔" }} Component %s installed`, component), true)
 			} else {
-				p.SetMessage(fmt.Sprintf(`{{ red "✘" }} %s encountered an error: %s`, cliName, cmp.err), true)
+				p.SetMessage(fmt.Sprintf(`{{ red "✘" }} Component %s encountered an error: %s`, component, cmp.err), true)
 			}
 			// Close the bar out, outputting a new line
 			delete(p.components, component)
@@ -132,7 +129,7 @@ func (p *Log) reportProgress(component string) func() {
 	}
 }
 
-func (p *Log) SetState(state InstallState) {
+func (p *ProgressLog) SetState(state InstallState) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.state = state
@@ -146,7 +143,7 @@ func (p *Log) SetState(state InstallState) {
 	}
 }
 
-func (p *Log) NewComponent(component string) *ManifestLog {
+func (p *ProgressLog) NewComponent(component string) *ManifestLog {
 	ml := &ManifestLog{
 		report: p.reportProgress(component),
 	}
@@ -156,7 +153,7 @@ func (p *Log) NewComponent(component string) *ManifestLog {
 	return ml
 }
 
-func (p *Log) SetMessage(status string, finish bool) {
+func (p *ProgressLog) SetMessage(status string, finish bool) {
 	// if we are not a terminal and there is no change, do not write
 	// This avoids redundant lines
 	if !p.bar.GetBool(pb.Terminal) && status == p.template {
