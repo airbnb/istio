@@ -53,7 +53,6 @@ import (
 	"istio.io/istio/operator/pkg/name"
 	"istio.io/istio/operator/pkg/object"
 	"istio.io/istio/operator/pkg/util"
-	"istio.io/istio/operator/pkg/util/clog"
 	"istio.io/istio/pilot/pkg/model"
 	"istio.io/pkg/log"
 )
@@ -345,18 +344,18 @@ func ApplyManifest(componentName name.ComponentName, manifestStr, version, revis
 	logAndPrint("- Applying manifest for component %s...", componentName)
 
 	// Apply namespace resources first, then wait.
-	nsObjects := NsKindObjects(objects)
+	nsObjects := nsKindObjects(objects)
 	stdout, stderr, err = applyObjects(nsObjects, &opts, stdout, stderr)
 	if err != nil {
 		return buildComponentApplyOutput(stdout, stderr, appliedObjects, err), appliedObjects
 	}
-	if err := WaitForResources(nsObjects, k8sClientset, opts.WaitTimeout, opts.DryRun, clog.NewDefaultLogger()); err != nil {
+	if err := WaitForResources(nsObjects, k8sClientset, opts.WaitTimeout, opts.DryRun); err != nil {
 		return buildComponentApplyOutput(stdout, stderr, appliedObjects, err), appliedObjects
 	}
 	appliedObjects = append(appliedObjects, nsObjects...)
 
 	// Apply CRDs, then wait.
-	crdObjects := CRDKindObjects(objects)
+	crdObjects := cRDKindObjects(objects)
 	stdout, stderr, err = applyObjects(crdObjects, &opts, stdout, stderr)
 	if err != nil {
 		return buildComponentApplyOutput(stdout, stderr, appliedObjects, err), appliedObjects
@@ -528,7 +527,7 @@ func DefaultObjectOrder() func(o *object.K8sObject) int {
 	}
 }
 
-func CRDKindObjects(objects object.K8sObjects) object.K8sObjects {
+func cRDKindObjects(objects object.K8sObjects) object.K8sObjects {
 	var ret object.K8sObjects
 	for _, o := range objects {
 		if o.Kind == "CustomResourceDefinition" {
@@ -538,7 +537,7 @@ func CRDKindObjects(objects object.K8sObjects) object.K8sObjects {
 	return ret
 }
 
-func NsKindObjects(objects object.K8sObjects) object.K8sObjects {
+func nsKindObjects(objects object.K8sObjects) object.K8sObjects {
 	var ret object.K8sObjects
 	for _, o := range objects {
 		if o.Kind == "Namespace" {
@@ -600,7 +599,7 @@ func waitForCRDs(objects object.K8sObjects, stdout string, dryRun bool) error {
 	}
 
 	var crdNames []string
-	for _, o := range CRDKindObjects(objects) {
+	for _, o := range cRDKindObjects(objects) {
 		crdNames = append(crdNames, o.Name)
 	}
 
@@ -641,9 +640,9 @@ func waitForCRDs(objects object.K8sObjects, stdout string, dryRun bool) error {
 
 // WaitForResources polls to get the current status of all pods, PVCs, and Services
 // until all are ready or a timeout is reached
-func WaitForResources(objects object.K8sObjects, cs kubernetes.Interface, waitTimeout time.Duration, dryRun bool, l clog.Logger) error {
+func WaitForResources(objects object.K8sObjects, cs kubernetes.Interface, waitTimeout time.Duration, dryRun bool) error {
 	if dryRun {
-		l.LogAndPrint("Not waiting for resources ready in dry run mode.")
+		logAndPrint("Not waiting for resources ready in dry run mode.")
 		return nil
 	}
 
@@ -730,7 +729,7 @@ func WaitForResources(objects object.K8sObjects, cs kubernetes.Interface, waitTi
 		pr, pnr := podsReady(pods)
 		isReady := dr && nsr && pr
 		if !isReady {
-			l.LogAndPrint("  Waiting for resources to become ready...")
+			logAndPrint("  Waiting for resources to become ready...")
 		}
 		notReady = append(append(nnr, dnr...), pnr...)
 		return isReady, nil

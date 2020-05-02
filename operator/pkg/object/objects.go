@@ -237,12 +237,6 @@ func (os K8sObjects) String() string {
 
 // ParseK8sObjectsFromYAMLManifest returns a K8sObjects representation of manifest.
 func ParseK8sObjectsFromYAMLManifest(manifest string) (K8sObjects, error) {
-	return ParseK8sObjectsFromYAMLManifestFailOption(manifest, true)
-}
-
-// ParseK8sObjectsFromYAMLManifest returns a K8sObjects representation of manifest. Continues parsing when a bad object
-// is found if failOnError is set to false.
-func ParseK8sObjectsFromYAMLManifestFailOption(manifest string, failOnError bool) (K8sObjects, error) {
 	var b bytes.Buffer
 
 	var yamls []string
@@ -273,11 +267,7 @@ func ParseK8sObjectsFromYAMLManifestFailOption(manifest string, failOnError bool
 		}
 		o, err := ParseYAMLToK8sObject([]byte(yaml))
 		if err != nil {
-			e := fmt.Errorf("failed to parse YAML to a k8s object: %s", err)
-			if failOnError {
-				return nil, e
-			}
-			log.Error(err.Error())
+			log.Errorf("Failed to parse YAML to a k8s object: %v", err.Error())
 			continue
 		}
 
