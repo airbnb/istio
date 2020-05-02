@@ -58,10 +58,4 @@ func TestProgressLog(t *testing.T) {
 
 	foo.ReportFinished()
 	expect(`✔ Component foo installed`)
-
-	p.SetState(StatePruning)
-	expect(`- Pruning removed resources`)
-
-	p.SetState(StateComplete)
-	expect(`✔ Installation complete`)
 }
