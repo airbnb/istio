@@ -149,7 +149,6 @@ func (h *HelmReconciler) processRecursive(manifests ChartManifestsMap) *v1alpha1
 		wg.Add(1)
 		go func() {
 			var processedObjs object.K8sObjects
-			var deployedObjects int
 			defer wg.Done()
 			cn := name.ComponentName(c)
 			if s := dependencyWaitCh[cn]; s != nil {
@@ -167,10 +166,9 @@ func (h *HelmReconciler) processRecursive(manifests ChartManifestsMap) *v1alpha1
 			status := v1alpha1.InstallStatus_NONE
 			var err error
 			if len(m) != 0 {
-				processedObjs, deployedObjects, err = h.ProcessManifest(m, len(componentDependencies[cn]) > 0)
-				if err != nil {
+				if processedObjs, err = h.ProcessManifest(m, len(componentDependencies[cn]) > 0); err != nil {
 					status = v1alpha1.InstallStatus_ERROR
-				} else if len(processedObjs) != 0 || deployedObjects > 0 {
+				} else if len(processedObjs) != 0 {
 					status = v1alpha1.InstallStatus_HEALTHY
 				}
 			}
