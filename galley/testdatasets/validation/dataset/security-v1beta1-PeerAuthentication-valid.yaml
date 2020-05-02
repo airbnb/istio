@@ -9,6 +9,6 @@ spec:
       version: v1
   mtls:
     mode: PERMISSIVE
-  portLevelMtls:
+  peerLevelMtls:
     8080:
       mode: STRICT

@@ -9,6 +9,9 @@ import (
 	// Register protos in "github.com/gogo/protobuf/types"
 	_ "github.com/gogo/protobuf/types"
 
+	// Register protos in "istio.io/api/authentication/v1alpha1"
+	_ "istio.io/api/authentication/v1alpha1"
+
 	// Register protos in "istio.io/api/mesh/v1alpha1"
 	_ "istio.io/api/mesh/v1alpha1"
 

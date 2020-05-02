@@ -893,7 +893,9 @@ func (ps *PushContext) updateContext(
 			collections.IstioRbacV1Alpha1Rbacconfigs.Resource().GroupVersionKind(),
 			collections.IstioSecurityV1Beta1Authorizationpolicies.Resource().GroupVersionKind():
 			authzChanged = true
-		case collections.IstioSecurityV1Beta1Requestauthentications.Resource().GroupVersionKind(),
+		case collections.IstioAuthenticationV1Alpha1Policies.Resource().GroupVersionKind(),
+			collections.IstioAuthenticationV1Alpha1Meshpolicies.Resource().GroupVersionKind(),
+			collections.IstioSecurityV1Beta1Requestauthentications.Resource().GroupVersionKind(),
 			collections.IstioSecurityV1Beta1Peerauthentications.Resource().GroupVersionKind():
 			authnChanged = true
 		case collections.IstioMixerV1ConfigClientQuotaspecbindings.Resource().GroupVersionKind(),
