@@ -27,16 +27,12 @@ import (
 )
 
 func TestGetMeshConfig(t *testing.T) {
-	meshOverride := `
+	overrides := `
 defaultConfig:
   discoveryAddress: foo:123
   proxyMetadata:
     SOME: setting
   drainDuration: 1s`
-	proxyOverride := `discoveryAddress: foo:123
-proxyMetadata:
-  SOME: setting
-drainDuration: 1s`
 	overridesExpected := func() meshconfig.ProxyConfig {
 		m := mesh.DefaultProxyConfig()
 		m.DiscoveryAddress = "foo:123"
@@ -56,18 +52,21 @@ drainDuration: 1s`
 			expect: mesh.DefaultProxyConfig(),
 		},
 		{
-			name:       "Annotation Override",
-			annotation: proxyOverride,
-			expect:     overridesExpected,
+			name: "Annotation Override",
+			annotation: `discoveryAddress: foo:123
+proxyMetadata:
+  SOME: setting
+drainDuration: 1s`,
+			expect: overridesExpected,
 		},
 		{
 			name:   "File Override",
-			file:   meshOverride,
+			file:   overrides,
 			expect: overridesExpected,
 		},
 		{
 			name:        "Environment Override",
-			environment: proxyOverride,
+			environment: overrides,
 			expect:      overridesExpected,
 		},
 		{
@@ -83,9 +82,10 @@ defaultConfig:
   drainDuration: 1s
   extraStatTags: ["a"]`,
 			environment: `
-discoveryAddress: environment:123
-proxyMetadata:
-OTHER: option`,
+defaultConfig:
+  discoveryAddress: environment:123
+  proxyMetadata:
+    OTHER: option`,
 			annotation: `
 discoveryAddress: annotation:123
 proxyMetadata:
@@ -105,7 +105,7 @@ extraStatTags: ["b"]
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			proxyConfigEnv = tt.environment
+			meshConfig = tt.environment
 			got, err := getMeshConfig(tt.file, tt.annotation)
 			if err != nil {
 				t.Fatal(err)

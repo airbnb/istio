@@ -28,7 +28,6 @@ import (
 	meshapi "istio.io/api/mesh/v1alpha1"
 
 	"istio.io/istio/pilot/test/util"
-	"istio.io/istio/pkg/config/constants"
 	"istio.io/istio/pkg/config/mesh"
 
 	corev1 "k8s.io/api/core/v1"
@@ -557,24 +556,22 @@ func TestSkipUDPPorts(t *testing.T) {
 	}
 }
 
-func TestCleanProxyConfig(t *testing.T) {
-	overrides := mesh.DefaultProxyConfig()
-	overrides.ConfigPath = "/foo/bar"
-	overrides.DrainDuration = types.DurationProto(7 * time.Second)
-	overrides.ProxyMetadata = map[string]string{
-		"foo": "barr",
-	}
-	explicit := mesh.DefaultProxyConfig()
-	explicit.ConfigPath = constants.ConfigPathDir
-	explicit.DrainDuration = types.DurationProto(45 * time.Second)
+func TestCleanMeshConfig(t *testing.T) {
+	explicit := mesh.DefaultMeshConfig()
+	explicit.TrustDomain = "cluster.local"
+	explicit.ConnectTimeout = types.DurationProto(10 * time.Second)
+	explicit.DefaultConfig.DrainDuration = types.DurationProto(45 * time.Second)
+	overrides := mesh.DefaultMeshConfig()
+	overrides.TrustDomain = "foo.bar"
+	overrides.IngressControllerMode = meshapi.MeshConfig_OFF
 	cases := []struct {
 		name   string
-		proxy  meshapi.ProxyConfig
+		mesh   meshapi.MeshConfig
 		expect string
 	}{
 		{
 			"default",
-			mesh.DefaultProxyConfig(),
+			mesh.DefaultMeshConfig(),
 			`{}`,
 		},
 		{
@@ -585,21 +582,21 @@ func TestCleanProxyConfig(t *testing.T) {
 		{
 			"overrides",
 			overrides,
-			`{"configPath":"/foo/bar","drainDuration":"7s","proxyMetadata":{"foo":"barr"}}`,
+			`{"ingressControllerMode":"OFF","trustDomain":"foo.bar"}`,
 		},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			got := protoToJSON(&tt.proxy)
+			got := protoToJSON(&tt.mesh)
 			if got != tt.expect {
 				t.Fatalf("incorrect output: got %v, expected %v", got, tt.expect)
 			}
-			roundTrip, err := mesh.ApplyProxyConfig(got, mesh.DefaultMeshConfig())
+			roundTrip, err := mesh.ApplyMeshConfig(got, mesh.DefaultMeshConfig())
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !cmp.Equal(*roundTrip.GetDefaultConfig(), tt.proxy) {
-				t.Fatalf("round trip is not identical: got \n%+v, expected \n%+v", *roundTrip.GetDefaultConfig(), tt.proxy)
+			if !cmp.Equal(*roundTrip, tt.mesh) {
+				t.Fatalf("round trip is not identical: got \n%+v, expected \n%+v", *roundTrip, tt.mesh)
 			}
 		})
 	}

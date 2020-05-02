@@ -75,9 +75,9 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        - name: PROXY_CONFIG
+        - name: MESH_CONFIG
           value: |
-            {"discoveryAddress":"foo:123","proxyMetadata":{"FOO":"bar"}}
+            {"defaultConfig":{"discoveryAddress":"foo:123","proxyMetadata":{"FOO":"bar"}}}
         - name: ISTIO_META_POD_PORTS
           value: |-
             [

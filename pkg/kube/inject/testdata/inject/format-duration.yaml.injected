@@ -73,9 +73,9 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        - name: PROXY_CONFIG
+        - name: MESH_CONFIG
           value: |
-            {"drainDuration":"23s","parentShutdownDuration":"42s"}
+            {"defaultConfig":{"drainDuration":"23s","parentShutdownDuration":"42s"}}
         - name: ISTIO_META_POD_PORTS
           value: |-
             [
