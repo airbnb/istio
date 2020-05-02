@@ -39,7 +39,6 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/golang/protobuf/ptypes"
 	structpb "github.com/golang/protobuf/ptypes/struct"
-	"github.com/golang/protobuf/ptypes/wrappers"
 
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	networking "istio.io/api/networking/v1alpha3"
@@ -2007,21 +2006,10 @@ func buildTracingConfig(config *meshconfig.ProxyConfig, proxyType model.NodeType
 		},
 	}
 
-	if config.Tracing != nil {
-		// only specify a MaxPathTagLength if meshconfig has specified one
-		// otherwise, rely on upstream envoy defaults
-		if config.Tracing.MaxPathTagLength != 0 {
-			tracingCfg.MaxPathTagLength =
-				&wrappers.UInt32Value{
-					Value: config.Tracing.MaxPathTagLength,
-				}
-		}
-
-		// custom tags should only be used for sidecar proxies and should not include
-		// gateways due to client requests from outside of the mesh
-		if len(config.Tracing.CustomTags) != 0 && proxyType == model.SidecarProxy {
-			tracingCfg.CustomTags = buildCustomTags(config.Tracing.CustomTags)
-		}
+	// custom tags should only be used for sidecar proxies and should not include
+	// gateways due to client requests from outside of the mesh
+	if config.Tracing != nil && len(config.Tracing.CustomTags) != 0 && proxyType == model.SidecarProxy {
+		tracingCfg.CustomTags = buildCustomTags(config.Tracing.CustomTags)
 	}
 
 	return tracingCfg
