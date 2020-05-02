@@ -50,10 +50,4 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 27017
-        volumeMounts:
-        - name: data-db
-          mountPath: /data/db
-      volumes:
-      - name: data-db
-        emptyDir:
 ---
