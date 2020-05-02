@@ -207,7 +207,6 @@ var (
 		"destination_cluster",
 		"request_protocol",
 		"request_operation",
-		"request_host",
 		"response_flags",
 		"grpc_response_status",
 		"connection_security_policy",
