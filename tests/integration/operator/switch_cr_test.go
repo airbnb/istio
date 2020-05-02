@@ -43,24 +43,19 @@ import (
 	"istio.io/istio/pkg/test/framework/resource"
 	"istio.io/istio/pkg/test/framework/resource/environment"
 	"istio.io/istio/pkg/test/scopes"
-	"istio.io/istio/pkg/test/shell"
 	"istio.io/istio/pkg/test/util/retry"
 	"istio.io/pkg/log"
 )
 
 const (
-	IstioNamespace    = "istio-system"
-	OperatorNamespace = "istio-operator"
-	retryDelay        = time.Second
-	retryTimeOut      = 100 * time.Second
+	IstioNamespace = "istio-system"
+	retryDelay     = time.Second
+	retryTimeOut   = 100 * time.Second
 )
 
 var (
-	// ManifestPath is path of local manifests which istioctl operator init refers to.
-	ManifestPath = filepath.Join(env.IstioSrc, "manifests")
-	ProfilesPath = filepath.Join(env.IstioSrc, "manifests/profiles")
-	// ManifestPathContainer is path of manifests in the operator container for controller to work with.
-	ManifestPathContainer = "/var/lib/istio/manifests"
+	ManifestTestDataPath = filepath.Join(env.IstioSrc, "operator/cmd/mesh/testdata/manifest-generate/input")
+	ProfilesPath         = filepath.Join(env.IstioSrc, "operator/data/profiles")
 )
 
 func TestController(t *testing.T) {
@@ -80,21 +75,14 @@ func TestController(t *testing.T) {
 			}
 			initCmd := []string{
 				"operator", "init",
-				"--wait",
 				"--hub=" + s.Hub,
 				"--tag=" + s.Tag,
-				"--charts=" + ManifestPath,
 			}
 			// install istio with default config for the first time by running operator init command
 			istioCtl.InvokeOrFail(t, initCmd)
 
 			if err := cs.CreateNamespace(IstioNamespace, ""); err != nil {
-				_, err := cs.GetNamespace(IstioNamespace)
-				if err == nil {
-					log.Info("istio namespace already exist")
-				} else {
-					t.Errorf("failed to create istio namespace: %v", err)
-				}
+				t.Errorf("failed to create istio namespace: %v", err)
 			}
 
 			// later just run `kubectl apply -f newcr.yaml` to apply new installation cr files and verify.
@@ -113,20 +101,13 @@ func checkInstallStatus(cs kube.Cluster) error {
 	}
 
 	retryFunc := func() error {
-		us, err := cs.GetUnstructured(gvr, IstioNamespace, "test-istiocontrolplane")
+		us, err := cs.GetUnstructured(gvr, "istio-system", "test-istiocontrolplane")
 		if err != nil {
 			return fmt.Errorf("failed to get istioOperator resource: %v", err)
 		}
 		usIOPStatus := us.UnstructuredContent()["status"]
 		if usIOPStatus == nil {
-			if _, err := cs.GetService(OperatorNamespace, "istio-operator"); err != nil {
-				return fmt.Errorf("istio operator svc is not ready: %v", err)
-			}
-			if _, err := cs.CheckPodsAreReady(cs.NewPodFetch(OperatorNamespace)); err != nil {
-				return fmt.Errorf("istio operator pod is not ready: %v", err)
-			}
-
-			return fmt.Errorf("status not found from the istioOperator resource")
+			return fmt.Errorf("cr status is not ready")
 		}
 		usIOPStatus = usIOPStatus.(map[string]interface{})
 		iopStatusString, err := json.Marshal(usIOPStatus)
@@ -152,12 +133,6 @@ func checkInstallStatus(cs kube.Cluster) error {
 	}
 	err := retry.UntilSuccess(retryFunc, retry.Timeout(retryTimeOut), retry.Delay(retryDelay))
 	if err != nil {
-		content, err := shell.Execute(false, "kubectl logs -n %s -l %s --tail=10000000",
-			OperatorNamespace, "name=istio-operator")
-		if err != nil {
-			return fmt.Errorf("unable to get logs from istio-operator: %v , content %v", err, content)
-		}
-		log.Infof("operator log: %s", content)
 		return fmt.Errorf("istioOperator status is not healthy: %v", err)
 	}
 	return nil
@@ -166,7 +141,7 @@ func checkInstallStatus(cs kube.Cluster) error {
 func installWithCRFile(t *testing.T, ctx resource.Context, cs kube.Cluster,
 	istioCtl istioctl.Instance, workDir string, iopFile string) {
 	log.Infof(fmt.Sprintf("=== install istio with new operator cr file: %s===\n", iopFile))
-	originalIOPYAML, err := ioutil.ReadFile(iopFile)
+	iop, err := ioutil.ReadFile(iopFile)
 	if err != nil {
 		t.Fatalf("failed to read iop file: %v", err)
 	}
@@ -174,11 +149,8 @@ func installWithCRFile(t *testing.T, ctx resource.Context, cs kube.Cluster,
 metadata:
   name: test-istiocontrolplane
   namespace: istio-system
-spec:
-  installPackagePath: %s
 `
-	overlayYAML := fmt.Sprintf(metadataYAML, ManifestPathContainer)
-	iopcr, err := util.OverlayYAML(string(originalIOPYAML), overlayYAML)
+	iopcr, err := util.OverlayYAML(string(iop), metadataYAML)
 	if err != nil {
 		t.Fatalf("failed to overlay iop with metadata: %v", err)
 	}
@@ -191,12 +163,11 @@ spec:
 		t.Fatalf("failed to apply IstioOperator CR file: %s, %v", iopCRFile, err)
 	}
 
-	verifyInstallation(t, ctx, istioCtl, iopFile, cs)
+	verifyInstallation(t, ctx, istioCtl, iopCRFile, cs)
 }
 
-// verifyInstallation verify IOP CR status and compare in-cluster resources with generated ones.
 func verifyInstallation(t *testing.T, ctx resource.Context,
-	istioCtl istioctl.Instance, originalIOPFile string, cs kube.Cluster) {
+	istioCtl istioctl.Instance, iopFile string, cs kube.Cluster) {
 	scopes.CI.Infof("=== verifying istio installation === ")
 	if err := checkInstallStatus(cs); err != nil {
 		t.Fatalf("IstioOperator status not healthy: %v", err)
@@ -206,7 +177,7 @@ func verifyInstallation(t *testing.T, ctx resource.Context,
 		t.Fatalf("pods are not ready: %v", err)
 	}
 
-	if err := compareInClusterAndGeneratedResources(t, istioCtl, originalIOPFile, cs); err != nil {
+	if err := compareInClusterAndGeneratedResources(t, istioCtl, iopFile, cs); err != nil {
 		t.Fatalf("in cluster resources does not match with the generated ones: %v", err)
 	}
 	sanityCheck(t, ctx)
@@ -248,15 +219,14 @@ func sanityCheck(t *testing.T, ctx resource.Context) {
 	}, retry.Delay(time.Millisecond*100))
 }
 
-func compareInClusterAndGeneratedResources(t *testing.T, istioCtl istioctl.Instance, originalIOPFile string,
-	cs kube.Cluster) error {
+func compareInClusterAndGeneratedResources(t *testing.T, istioCtl istioctl.Instance,
+	iopFile string, cs kube.Cluster) error {
 	// get manifests by running `manifest generate`
 	generateCmd := []string{
 		"manifest", "generate",
-		"--charts", ManifestPath,
 	}
-	if originalIOPFile != "" {
-		generateCmd = append(generateCmd, "-f", originalIOPFile)
+	if iopFile != "" {
+		generateCmd = append(generateCmd, "-f", iopFile)
 	}
 	genManifests := istioCtl.InvokeOrFail(t, generateCmd)
 	genK8SObjects, err := object.ParseK8sObjectsFromYAMLManifest(genManifests)
