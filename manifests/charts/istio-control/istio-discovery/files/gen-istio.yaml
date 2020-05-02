@@ -62,7 +62,6 @@ data:
     disablePolicyChecks: true
     enableAutoMtls: true
     enableEnvoyAccessLogService: false
-    enablePrometheusMerge: false
     enableTracing: true
     ingressClass: istio
     ingressControllerMode: STRICT

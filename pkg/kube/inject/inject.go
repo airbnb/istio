@@ -88,7 +88,6 @@ var (
 		annotation.SidecarTrafficExcludeInboundPorts.Name:         ValidateExcludeInboundPorts,
 		annotation.SidecarTrafficExcludeOutboundPorts.Name:        ValidateExcludeOutboundPorts,
 		annotation.SidecarTrafficKubevirtInterfaces.Name:          alwaysValidFunc,
-		annotation.PrometheusMergeMetrics.Name:                    validateBool,
 	}
 )
 

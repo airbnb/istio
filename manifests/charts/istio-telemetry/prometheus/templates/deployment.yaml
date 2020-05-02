@@ -56,12 +56,12 @@ spec:
           volumeMounts:
           - name: config-volume
             mountPath: /etc/prometheus
-          {{- if and .Values.prometheus.provisionPrometheusCert (not .Values.meshConfig.enablePrometheusMerge) }}
+          {{- if .Values.prometheus.provisionPrometheusCert }}
           - mountPath: /etc/istio-certs
             name: istio-certs
           {{- end }}
 
-{{- if and .Values.prometheus.provisionPrometheusCert (not .Values.meshConfig.enablePrometheusMerge) }}
+{{- if .Values.prometheus.provisionPrometheusCert }}
         - name: istio-proxy
 {{- if contains "/" .Values.global.proxy.image }}
           image: "{{ .Values.global.proxy.image }}"
@@ -176,13 +176,13 @@ spec:
         configMap:
           name: prometheus
 
-{{- if and .Values.prometheus.provisionPrometheusCert (not .Values.meshConfig.enablePrometheusMerge) }}
+{{- if .Values.prometheus.provisionPrometheusCert }}
       - name: istio-certs
         emptyDir:
           medium: Memory
 {{- end }}
 
-{{- if and .Values.prometheus.provisionPrometheusCert (not .Values.meshConfig.enablePrometheusMerge) }}
+{{- if .Values.prometheus.provisionPrometheusCert }}
       - emptyDir:
           medium: Memory
         name: istio-envoy

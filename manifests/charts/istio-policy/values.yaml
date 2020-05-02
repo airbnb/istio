@@ -47,4 +47,3 @@ mixer:
     podAntiAffinityTermLabelSelector: []
 
 revision: ""
-
