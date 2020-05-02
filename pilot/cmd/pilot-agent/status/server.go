@@ -19,7 +19,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -393,11 +392,7 @@ func (s *Server) handleAppProbe(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	defer func() {
-		// Drain and close the body to let the Transport reuse the connection
-		_, _ = io.Copy(ioutil.Discard, response.Body)
-		_ = response.Body.Close()
-	}()
+	defer response.Body.Close()
 
 	// We only write the status code to the response.
 	w.WriteHeader(response.StatusCode)
