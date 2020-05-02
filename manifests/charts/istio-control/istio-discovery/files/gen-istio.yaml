@@ -74,7 +74,6 @@ data:
     protocolDetectionTimeout: 100ms
     reportBatchMaxEntries: 100
     reportBatchMaxTime: 1s
-    rootNamespace: istio-system
     sdsUdsPath: unix:/etc/istio/proxy/SDS
     trustDomain: cluster.local
     trustDomainAliases: null
@@ -302,8 +301,7 @@ data:
             }
           }
         },
-        "enablePrometheusMerge": false,
-        "rootNamespace": "istio-system"
+        "enablePrometheusMerge": false
       },
       "revision": "",
       "sidecarInjectorWebhook": {
