@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	jsonpatch "github.com/evanphx/json-patch"
 	"helm.sh/helm/v3/pkg/releaseutil"
@@ -28,8 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/util/retry"
 	util2 "k8s.io/kubectl/pkg/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -331,30 +328,23 @@ func (h *HelmReconciler) ProcessObject(chartName string, obj *unstructured.Unstr
 		return nil
 	}
 
-	backoff := wait.Backoff{Duration: time.Millisecond * 10, Factor: 2, Steps: 3}
-	return retry.RetryOnConflict(backoff, func() error {
-		err := h.client.Get(context.TODO(), objectKey, receiver)
-		switch {
-		case apierrors.IsNotFound(err):
-			scope.Infof("creating resource: %s", objectStr)
-			err = h.client.Create(context.TODO(), obj)
-			if err != nil {
-				return fmt.Errorf("failed to create %q: %w", objectStr, err)
-			}
-			return nil
-		case err == nil:
-			scope.Infof("updating resource: %s", objectStr)
-			if err := applyOverlay(receiver, obj); err != nil {
-				return err
-			}
-			updateErr := h.client.Update(context.TODO(), receiver)
-			if updateErr != nil {
-				scope.Warnf("update %v: %v", receiver.GetName(), updateErr)
-			}
-			return updateErr
+	err := h.client.Get(context.TODO(), objectKey, receiver)
+	switch {
+	case apierrors.IsNotFound(err):
+		scope.Infof("creating resource: %s", objectStr)
+		err = h.client.Create(context.TODO(), obj)
+		if err != nil {
+			return fmt.Errorf("failed to create %q: %w", objectStr, err)
 		}
 		return nil
-	})
+	case err == nil:
+		scope.Infof("updating resource: %s", objectStr)
+		if err := applyOverlay(receiver, obj); err != nil {
+			return err
+		}
+		return h.client.Update(context.TODO(), receiver)
+	}
+	return err
 }
 
 // applyOverlay applies an overlay using JSON patch strategy over the current Object in place.
