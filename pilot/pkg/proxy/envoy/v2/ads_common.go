@@ -125,7 +125,6 @@ func PushTypeFor(proxy *model.Proxy, pushEv *XdsEvent) map[XdsType]bool {
 			case collections.IstioNetworkingV1Alpha3Destinationrules.Resource().GroupVersionKind():
 				out[CDS] = true
 				out[EDS] = true
-				out[RDS] = true
 			case collections.IstioNetworkingV1Alpha3Envoyfilters.Resource().GroupVersionKind():
 				out[CDS] = true
 				out[EDS] = true
