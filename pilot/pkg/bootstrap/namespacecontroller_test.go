@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+package bootstrap
 
 import (
 	"context"
@@ -20,6 +20,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"istio.io/istio/pilot/pkg/serviceregistry/kube/controller"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +36,7 @@ func TestNamespaceController(t *testing.T) {
 	testdata := map[string]string{"key": "value"}
 	nc := NewNamespaceController(func() map[string]string {
 		return testdata
-	}, Options{}, client)
+	}, controller.Options{}, client)
 
 	stop := make(chan struct{})
 	nc.Run(stop)

@@ -26,8 +26,6 @@ import (
 	"strings"
 	"time"
 
-	"istio.io/istio/pilot/pkg/serviceregistry/kube/controller"
-
 	"istio.io/istio/pkg/jwt"
 
 	"istio.io/istio/pilot/pkg/features"
@@ -379,7 +377,7 @@ func (s *Server) initPublicKey() error {
 						select {
 						case <-stop:
 							return
-						case <-time.After(controller.NamespaceResyncPeriod):
+						case <-time.After(namespaceResyncPeriod):
 							newRootCert := s.ca.GetCAKeyCertBundle().GetRootCertPem()
 							if !bytes.Equal(rootCert, newRootCert) {
 								rootCert = newRootCert
