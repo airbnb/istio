@@ -216,7 +216,6 @@ func deployControlPlane(c *operatorComponent, cfg Config, cluster kube.Cluster, 
 		"-f", defaultsIOPFile,
 		"-f", iopFile,
 		"--set", "values.global.imagePullPolicy=" + s.PullPolicy,
-		"--charts", filepath.Join(env.IstioSrc, "manifests"),
 	}
 	// Include all user-specified values.
 	for k, v := range cfg.Values {
