@@ -22,6 +22,9 @@ pilot:
       cpu: 500m
       memory: 2048Mi
 
+  # Namespace for Istio config
+  configNamespace: istio-config
+
   # Applications namespace list pilot manages
   appNamespaces: []
 
