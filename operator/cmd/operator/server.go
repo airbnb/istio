@@ -16,16 +16,19 @@ package main
 
 import (
 	"fmt"
-	"os" // Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+	"os"
+
+	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/spf13/cobra"
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"istio.io/istio/operator/pkg/apis"
 	"istio.io/istio/operator/pkg/controller"
+	"istio.io/istio/operator/pkg/controller/istiocontrolplane"
 	"istio.io/pkg/ctrlz"
 	"istio.io/pkg/log"
 )
@@ -62,6 +65,7 @@ func serverCmd() *cobra.Command {
 
 	loggingOptions.AttachCobraFlags(serverCmd)
 	introspectionOptions.AttachCobraFlags(serverCmd)
+	istiocontrolplane.AttachCobraFlags(serverCmd)
 
 	return serverCmd
 }
