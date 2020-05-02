@@ -15,12 +15,15 @@
 package mesh
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"istio.io/istio/operator/pkg/kubectlcmd"
+	"istio.io/istio/operator/pkg/manifest"
+	"istio.io/istio/operator/pkg/object"
 	"istio.io/istio/operator/pkg/util/clog"
 )
 
@@ -29,6 +32,12 @@ type operatorRemoveArgs struct {
 	// force proceeds even if there are validation errors
 	force bool
 }
+
+type manifestDeleter func(manifestStr, componentName string, opts *kubectlcmd.Options, l clog.Logger) bool
+
+var (
+	defaultManifestDeleter = deleteManifest
+)
 
 func addOperatorRemoveFlags(cmd *cobra.Command, oiArgs *operatorRemoveArgs) {
 	addOperatorInitFlags(cmd, &oiArgs.operatorInitArgs)
@@ -43,20 +52,15 @@ func operatorRemoveCmd(rootArgs *rootArgs, orArgs *operatorRemoveArgs) *cobra.Co
 		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			l := clog.NewConsoleLogger(rootArgs.logToStdErr, cmd.OutOrStdout(), cmd.OutOrStderr())
-			operatorRemove(rootArgs, orArgs, l)
+			operatorRemove(rootArgs, orArgs, l, defaultManifestDeleter)
 		}}
 }
 
 // operatorRemove removes the Istio operator controller from the cluster.
-func operatorRemove(args *rootArgs, orArgs *operatorRemoveArgs, l clog.Logger) {
+func operatorRemove(args *rootArgs, orArgs *operatorRemoveArgs, l clog.Logger, deleteManifestFunc manifestDeleter) {
 	initLogsOrExit(args)
 
-	restConfig, clientset, client, err := K8sConfig(orArgs.kubeConfigPath, orArgs.context)
-	if err != nil {
-		l.LogAndFatal(err)
-	}
-
-	installed, err := isControllerInstalled(clientset, orArgs.common.operatorNamespace)
+	installed, err := isControllerInstalled(orArgs.kubeConfigPath, orArgs.context, orArgs.common.operatorNamespace)
 	if installed && err != nil {
 		l.LogAndFatal(err)
 	}
@@ -76,14 +80,19 @@ func operatorRemove(args *rootArgs, orArgs *operatorRemoveArgs, l clog.Logger) {
 
 	scope.Debugf("Using the following manifest to remove operator:\n%s\n", mstr)
 
-	opts := &Options{
+	opts := &kubectlcmd.Options{
 		DryRun:      args.dryRun,
+		Verbose:     args.verbose,
 		WaitTimeout: 1 * time.Minute,
 		Kubeconfig:  orArgs.kubeConfigPath,
 		Context:     orArgs.context,
 	}
 
-	success := deleteManifest(restConfig, client, mstr, "Operator", opts, l)
+	if _, _, err := manifest.InitK8SRestClient(opts.Kubeconfig, opts.Context); err != nil {
+		l.LogAndFatal(err)
+	}
+
+	success := deleteManifestFunc(mstr, "Operator", opts, l)
 	if !success {
 		l.LogAndPrint("\n*** Errors were logged during manifest deletion. Please check logs above. ***\n")
 		return
@@ -92,7 +101,32 @@ func operatorRemove(args *rootArgs, orArgs *operatorRemoveArgs, l clog.Logger) {
 	l.LogAndPrint("\n*** Success. ***\n")
 }
 
-func deleteManifest(_ *rest.Config, _ client.Client, _, _ string, _ *Options, l clog.Logger) bool {
-	l.LogAndError("Deleting manifest not implemented")
-	return false
+func deleteManifest(manifestStr, componentName string, opts *kubectlcmd.Options, l clog.Logger) bool {
+	l.LogAndPrintf("Deleting manifest for component %s...", componentName)
+	objs, err := object.ParseK8sObjectsFromYAMLManifest(manifestStr)
+	if err != nil {
+		l.LogAndPrint("Parse error: ", err, "\n")
+		return false
+	}
+	stdout, stderr, err := kubectlcmd.New().Delete(manifestStr, opts)
+
+	success := true
+	if err != nil {
+		cs := fmt.Sprintf("Component %s delete returned the following errors:", componentName)
+		l.LogAndPrintf("\n%s\n%s", cs, strings.Repeat("=", len(cs)))
+		l.LogAndPrint("Error: ", err, "\n")
+		success = false
+	} else {
+		l.LogAndPrintf("Component %s deleted successfully.", componentName)
+		if opts.Verbose {
+			l.LogAndPrintf("The following parseObjectSetFromManifest were deleted:\n%s", k8sObjectsString(objs))
+		}
+	}
+
+	if !ignoreError(stderr) {
+		l.LogAndPrint("Error detail:\n", stderr, "\n")
+		l.LogAndPrint(stdout, "\n")
+		success = false
+	}
+	return success
 }

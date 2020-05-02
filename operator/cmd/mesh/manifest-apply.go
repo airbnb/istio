@@ -21,10 +21,13 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"istio.io/api/operator/v1alpha1"
 	iopv1alpha1 "istio.io/istio/operator/pkg/apis/istio/v1alpha1"
 	"istio.io/istio/operator/pkg/helmreconciler"
+	"istio.io/istio/operator/pkg/manifest"
 	"istio.io/istio/operator/pkg/object"
 	"istio.io/istio/operator/pkg/translate"
 	"istio.io/istio/operator/pkg/util"
@@ -164,7 +167,16 @@ func ApplyManifests(setOverlay []string, inFilenames []string, force bool, dryRu
 	if err != nil {
 		return err
 	}
-	restConfig, clientset, client, err := K8sConfig(kubeConfigPath, context)
+
+	restConfig, _, err := manifest.InitK8SRestClient(kubeConfigPath, context)
+	if err != nil {
+		return err
+	}
+	// We are running a one-off command locally, so we don't need to worry too much about rate limitting
+	// Bumping this up greatly decreases install time
+	restConfig.QPS = 50
+	restConfig.Burst = 100
+	client, err := client.New(restConfig, client.Options{Scheme: scheme.Scheme})
 	if err != nil {
 		return err
 	}
@@ -182,7 +194,7 @@ func ApplyManifests(setOverlay []string, inFilenames []string, force bool, dryRu
 		return err
 	}
 
-	if err := CreateNamespace(clientset, iop.Namespace); err != nil {
+	if err := manifest.CreateNamespace(iop.Namespace); err != nil {
 		return err
 	}
 
