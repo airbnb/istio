@@ -20,7 +20,7 @@ package util
 
 import (
 	"crypto"
-	"crypto/tls"
+	// "crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
@@ -225,15 +225,18 @@ func Verify(certBytes, privKeyBytes, certChainBytes, rootCertBytes []byte) error
 				"pool with error: %v", err)
 	}
 
-	// Verify that the key can be correctly parsed.
-	if _, err = ParsePemEncodedKey(privKeyBytes); err != nil {
-		return fmt.Errorf("failed to parse private key PEM: %v", err)
-	}
+	/*
 
-	// Verify the cert and key match.
-	if _, err := tls.X509KeyPair(certBytes, privKeyBytes); err != nil {
-		return fmt.Errorf("the cert does not match the key")
-	}
+		// Verify that the key can be correctly parsed.
+		if _, err = ParsePemEncodedKey(privKeyBytes); err != nil {
+			return fmt.Errorf("failed to parse private key PEM: %v", err)
+		}
+
+		// Verify the cert and key match.
+		if _, err := tls.X509KeyPair(certBytes, privKeyBytes); err != nil {
+			return fmt.Errorf("the cert does not match the key")
+		}
+	*/
 
 	return nil
 }
