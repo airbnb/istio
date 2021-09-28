@@ -394,6 +394,19 @@ func (s *ServiceEntryStore) WorkloadInstanceHandler(wi *model.WorkloadInstance, 
 	// this is from a pod. Store it in separate map so that
 	// the refreshIndexes function can use these as well as the store ones.
 	k := wi.Namespace + "/" + wi.Name
+
+	log.Debugf("[ServiceEntryStore] Handle event %s for service instance %s in namespace %s (IP %s)", event, wi.Name, wi.Namespace, wi.Endpoint.Address)
+	if existing, exists := s.workloadInstancesByIP[wi.Endpoint.Address]; exists {
+		log.Debugf("[ServiceEntryStore] Current workloadInstancesByIP for address %s exists (%s)", wi.Endpoint.Address, existing)
+	} else {
+		log.Debugf("[ServiceEntryStore] Current workloadInstancesByIP for address %s does not exist", wi.Endpoint.Address)
+	}
+	if existing, exists := s.workloadInstancesIPsByName[k]; exists {
+		log.Debugf("[ServiceEntryStore] Current workloadInstancesIPsByName for name %s exists (%s)", k, existing)
+	} else {
+		log.Debugf("[ServiceEntryStore] Current workloadInstancesIPsByName for name %s does not exist", k)
+	}
+	
 	switch event {
 	case model.EventDelete:
 		if _, exists := s.workloadInstancesByIP[wi.Endpoint.Address]; !exists {

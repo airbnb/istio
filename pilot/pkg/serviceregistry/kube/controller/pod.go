@@ -119,6 +119,8 @@ func (pc *PodCache) onEvent(curr interface{}, ev model.Event) error {
 
 	ip := pod.Status.PodIP
 
+	log.Debugf("[podcache] Handle event %s for pod %s in namespace %s (IP %s)", ev, pod.Name, pod.Namespace, ip)
+
 	// PodIP will be empty when pod is just created, but before the IP is assigned
 	// via UpdateStatus.
 	if len(ip) > 0 {
@@ -166,6 +168,8 @@ func (pc *PodCache) onEvent(curr interface{}, ev model.Event) error {
 				pc.deleteIP(ip)
 			}
 		}
+
+		log.Debugf("[podcache] Fire event %s for pod %s in namespace %s (IP %s)", ev, pod.Name, pod.Namespace, ip)
 		// fire instance handles for workload
 		for _, handler := range pc.c.workloadHandlers {
 			ep := NewEndpointBuilder(pc.c, pod).buildIstioEndpoint(ip, 0, "")
