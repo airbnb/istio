@@ -740,7 +740,7 @@ func virtualServiceDestinations(v *networking.VirtualService) map[string]sets.In
 func (ps *PushContext) GatewayServices(proxy *Proxy) []*Service {
 	svcs := ps.Services(proxy)
 	// host set.
-	hostsFromGateways := map[string]struct{}{}
+	hostsFromGateways := sets.NewSet()
 
 	// MergedGateway will be nil when there are no configs in the
 	// system during initial installation.
