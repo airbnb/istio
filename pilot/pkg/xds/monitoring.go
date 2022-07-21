@@ -268,6 +268,7 @@ func init() {
 		xdsClients,
 		xdsResponseWriteTimeouts,
 		pushes,
+		pushContextInitTime,
 		pushTime,
 		proxiesConvergeDelay,
 		proxiesQueueTime,
