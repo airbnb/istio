@@ -1033,6 +1033,221 @@ var (
 			},
 		},
 	}
+
+	configs22 = &config.Config{
+		Meta: config.Meta{
+			Name: "egress-multiple-ports-test",
+		},
+		Spec: &networking.Sidecar{
+			Egress: []*networking.IstioEgressListener{
+				{
+					Hosts: []string{"ns/bar-1"},
+				},
+				{
+					Hosts: []string{"ns/bar-2"},
+				},
+				{
+					Hosts: []string{"ns/bar-3"},
+				},
+			},
+		},
+	}
+
+	portEgress = []*Port{
+		{
+			Name: "bar-1",
+			Port: 12074,
+		},
+		{
+			Name: "bar-2",
+			Port: 12075,
+		},
+		{
+			Name: "bar-3",
+			Port: 12076,
+		},
+		{
+			Name: "bar-4",
+			Port: 12077,
+		},
+	}
+
+	portOut = []*Port{
+		{
+			Name: "bar-1",
+			Port: 12074,
+		},
+		{
+			Name: "bar-2",
+			Port: 12075,
+		},
+		{
+			Name: "bar-3",
+			Port: 12076,
+		},
+	}
+
+	port6379 = []*Port{
+		{
+			Name: "port",
+			Port: 6379,
+		},
+	}
+
+	services23 = []*Service{
+		{
+			Hostname: "egress.svc.cluster.local",
+			Ports:    portEgress,
+			Attributes: ServiceAttributes{
+				Name:      "egress",
+				Namespace: "ns",
+			},
+		},
+		{
+			Hostname: "bar-1",
+			Ports:    port6379,
+			Attributes: ServiceAttributes{
+				Name:      "bar-1",
+				Namespace: "ns",
+			},
+		},
+		{
+			Hostname: "bar-2",
+			Ports:    port6379,
+			Attributes: ServiceAttributes{
+				Name:      "bar-2",
+				Namespace: "ns",
+			},
+		},
+		{
+			Hostname: "bar-3",
+			Ports:    port6379,
+			Attributes: ServiceAttributes{
+				Name:      "bar-3",
+				Namespace: "ns",
+			},
+		},
+		{
+			Hostname: "bar-4",
+			Ports:    port6379,
+			Attributes: ServiceAttributes{
+				Name:      "bar-4",
+				Namespace: "ns",
+			},
+		},
+	}
+
+	virtualServices6 = []config.Config{
+		{
+			Meta: config.Meta{
+				GroupVersionKind: collections.IstioNetworkingV1Alpha3Virtualservices.Resource().GroupVersionKind(),
+				Name:             "bar-1",
+				Namespace:        "ns",
+			},
+			Spec: &networking.VirtualService{
+				Hosts: []string{"bar-1"},
+				Tcp: []*networking.TCPRoute{
+					{
+						Match: []*networking.L4MatchAttributes{
+							{
+								Port: 6379,
+							},
+						},
+						Route: []*networking.RouteDestination{
+							{
+
+								Destination: &networking.Destination{
+									Host: "egress.svc.cluster.local", Port: &networking.PortSelector{Number: 12074},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Meta: config.Meta{
+				GroupVersionKind: collections.IstioNetworkingV1Alpha3Virtualservices.Resource().GroupVersionKind(),
+				Name:             "bar-2",
+				Namespace:        "ns",
+			},
+			Spec: &networking.VirtualService{
+				Hosts: []string{"bar-2"},
+				Tcp: []*networking.TCPRoute{
+					{
+						Match: []*networking.L4MatchAttributes{
+							{
+								Port: 6379,
+							},
+						},
+						Route: []*networking.RouteDestination{
+							{
+
+								Destination: &networking.Destination{
+									Host: "egress.svc.cluster.local", Port: &networking.PortSelector{Number: 12075},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Meta: config.Meta{
+				GroupVersionKind: collections.IstioNetworkingV1Alpha3Virtualservices.Resource().GroupVersionKind(),
+				Name:             "bar-3",
+				Namespace:        "ns",
+			},
+			Spec: &networking.VirtualService{
+				Hosts: []string{"bar-3"},
+				Tcp: []*networking.TCPRoute{
+					{
+						Match: []*networking.L4MatchAttributes{
+							{
+								Port: 6379,
+							},
+						},
+						Route: []*networking.RouteDestination{
+							{
+
+								Destination: &networking.Destination{
+									Host: "egress.svc.cluster.local", Port: &networking.PortSelector{Number: 12076},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Meta: config.Meta{
+				GroupVersionKind: collections.IstioNetworkingV1Alpha3Virtualservices.Resource().GroupVersionKind(),
+				Name:             "bar-4",
+				Namespace:        "ns",
+			},
+			Spec: &networking.VirtualService{
+				Hosts: []string{"bar-4"},
+				Tcp: []*networking.TCPRoute{
+					{
+						Match: []*networking.L4MatchAttributes{
+							{
+								Port: 6379,
+							},
+						},
+						Route: []*networking.RouteDestination{
+							{
+
+								Destination: &networking.Destination{
+									Host: "egress.svc.cluster.local", Port: &networking.PortSelector{Number: 12077},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	destinationRule1 = config.Config{
 		Meta: config.Meta{
 			Name:      "drRule1",
@@ -1561,6 +1776,31 @@ func TestCreateSidecarScope(t *testing.T) {
 				{
 					Hostname: "baz.svc.cluster.local",
 					Ports:    port7000,
+				},
+			},
+			nil,
+		},
+		{
+			"ying",
+			configs22,
+			services23,
+			virtualServices6,
+			[]*Service{
+				{
+					Hostname: "bar-1",
+					Ports:    port6379,
+				},
+				{
+					Hostname: "bar-2",
+					Ports:    port6379,
+				},
+				{
+					Hostname: "bar-3",
+					Ports:    port6379,
+				},
+				{
+					Hostname: "egress.svc.cluster.local",
+					Ports:    portOut,
 				},
 			},
 			nil,
