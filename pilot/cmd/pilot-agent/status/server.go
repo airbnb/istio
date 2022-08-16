@@ -28,6 +28,7 @@ import (
 	"net/http/pprof"
 	"os"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -327,6 +328,9 @@ func (s *Server) Run(ctx context.Context) {
 	mux.HandleFunc("/app-health/", s.handleAppProbe)
 
 	// Add the handler for pprof.
+	runtime.SetBlockProfileRate(1)
+	runtime.SetMutexProfileFraction(1)
+	
 	mux.HandleFunc("/debug/pprof/", s.handlePprofIndex)
 	mux.HandleFunc("/debug/pprof/cmdline", s.handlePprofCmdline)
 	mux.HandleFunc("/debug/pprof/profile", s.handlePprofProfile)
