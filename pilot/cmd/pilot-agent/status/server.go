@@ -330,12 +330,14 @@ func (s *Server) Run(ctx context.Context) {
 	// Add the handler for pprof.
 	runtime.SetBlockProfileRate(1)
 	runtime.SetMutexProfileFraction(1)
-	
+
 	mux.HandleFunc("/debug/pprof/", s.handlePprofIndex)
 	mux.HandleFunc("/debug/pprof/cmdline", s.handlePprofCmdline)
 	mux.HandleFunc("/debug/pprof/profile", s.handlePprofProfile)
 	mux.HandleFunc("/debug/pprof/symbol", s.handlePprofSymbol)
 	mux.HandleFunc("/debug/pprof/trace", s.handlePprofTrace)
+	mux.HandleFunc("/debug/pprof/block", pprof.Handler("block").ServeHTTP)
+	mux.HandleFunc("/debug/pprof/mutex", pprof.Handler("mutex").ServeHTTP)
 	mux.HandleFunc("/debug/ndsz", s.handleNdsz)
 
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", s.statusPort))
