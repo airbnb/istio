@@ -26,6 +26,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/pprof"
+	_ "net/http/pprof"
 	"os"
 	"regexp"
 	"runtime"
@@ -330,10 +331,11 @@ func (s *Server) Run(ctx context.Context) {
 	// Add the handler for pprof.
 	runtime.SetBlockProfileRate(1)
 	runtime.SetMutexProfileFraction(1)
+	fmt.Println("[Ying] block rate and mutex fraction set to 1")
 
-	mux.HandleFunc("/debug/pprof/", s.handlePprofIndex)
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
 	mux.HandleFunc("/debug/pprof/cmdline", s.handlePprofCmdline)
-	mux.HandleFunc("/debug/pprof/profile", s.handlePprofProfile)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Handler("profile").ServeHTTP)
 	mux.HandleFunc("/debug/pprof/symbol", s.handlePprofSymbol)
 	mux.HandleFunc("/debug/pprof/trace", s.handlePprofTrace)
 	mux.HandleFunc("/debug/pprof/block", pprof.Handler("block").ServeHTTP)
