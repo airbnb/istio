@@ -26,7 +26,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/pprof"
-	_ "net/http/pprof"
 	"os"
 	"regexp"
 	"runtime"
@@ -145,6 +144,10 @@ type Server struct {
 }
 
 func init() {
+	runtime.SetBlockProfileRate(1)
+	runtime.SetMutexProfileFraction(1)
+	log.Info("[Ying] block rate and mutex fraction set to 1")
+
 	registry := prometheus.NewRegistry()
 	wrapped := prometheus.WrapRegistererWithPrefix("istio_agent_", prometheus.Registerer(registry))
 	wrapped.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
@@ -329,10 +332,6 @@ func (s *Server) Run(ctx context.Context) {
 	mux.HandleFunc("/app-health/", s.handleAppProbe)
 
 	// Add the handler for pprof.
-	runtime.SetBlockProfileRate(1)
-	runtime.SetMutexProfileFraction(1)
-	fmt.Println("[Ying] block rate and mutex fraction set to 1")
-
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
 	mux.HandleFunc("/debug/pprof/cmdline", s.handlePprofCmdline)
 	mux.HandleFunc("/debug/pprof/profile", pprof.Handler("profile").ServeHTTP)
