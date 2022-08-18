@@ -16,6 +16,7 @@ package xds
 
 import (
 	"fmt"
+	"time"
 
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
@@ -519,7 +520,10 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy,
 			}
 		}
 		builder := NewEndpointBuilder(clusterName, proxy, push)
-		if marshalledEndpoint, f := eds.Server.Cache.Get(builder); f && !features.EnableUnsafeAssertions {
+		t0 := time.Now()
+		marshalledEndpoint, f := eds.Server.Cache.Get(builder)
+		recordCacheGetTime(v3.EndpointType, time.Since(t0))
+		if f && !features.EnableUnsafeAssertions {
 			// We skip cache if assertions are enabled, so that the cache will assert our eviction logic is correct
 			resources = append(resources, marshalledEndpoint)
 			cached++
