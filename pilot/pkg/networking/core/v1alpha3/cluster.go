@@ -291,6 +291,7 @@ func (configgen *ConfigGeneratorImpl) buildOutboundClusters(cb *ClusterBuilder, 
 		}
 	}
 
+	// todo(ying): should only record cache stats if cdscaching is enabled?
 	return resources, cacheStats{hits: hit, miss: miss}
 }
 

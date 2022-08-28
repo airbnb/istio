@@ -329,18 +329,20 @@ func BuildSidecarOutboundVirtualHosts(node *model.Proxy, push *model.PushContext
 			return services[i].Hostname <= services[j].Hostname
 		})
 
-		routeCache = &istio_route.Cache{
-			RouteName:               routeName,
-			ProxyVersion:            node.Metadata.IstioVersion,
-			ClusterID:               string(node.Metadata.ClusterID),
-			DNSDomain:               node.DNSDomain,
-			DNSCapture:              bool(node.Metadata.DNSCapture),
-			DNSAutoAllocate:         bool(node.Metadata.DNSAutoAllocate),
-			ListenerPort:            listenerPort,
-			Services:                services,
-			VirtualServices:         virtualServices,
-			DelegateVirtualServices: push.DelegateVirtualServicesConfigKey(virtualServices),
-			EnvoyFilterKeys:         efKeys,
+		if features.EnableRDSCaching {
+			routeCache = &istio_route.Cache{
+				RouteName:               routeName,
+				ProxyVersion:            node.Metadata.IstioVersion,
+				ClusterID:               string(node.Metadata.ClusterID),
+				DNSDomain:               node.DNSDomain,
+				DNSCapture:              bool(node.Metadata.DNSCapture),
+				DNSAutoAllocate:         bool(node.Metadata.DNSAutoAllocate),
+				ListenerPort:            listenerPort,
+				Services:                services,
+				VirtualServices:         virtualServices,
+				DelegateVirtualServices: push.DelegateVirtualServicesConfigKey(virtualServices),
+				EnvoyFilterKeys:         efKeys,
+			}
 		}
 	}
 
@@ -352,9 +354,11 @@ func BuildSidecarOutboundVirtualHosts(node *model.Proxy, push *model.PushContext
 	// Get list of virtual services bound to the mesh gateway
 	virtualHostWrappers := istio_route.BuildSidecarVirtualHostWrapper(routeCache, node, push, servicesByName, virtualServices, listenerPort)
 
-	resource, exist := xdsCache.Get(routeCache)
-	if exist && !features.EnableUnsafeAssertions {
-		return nil, resource, routeCache
+	if features.EnableRDSCaching {
+		resource, exist := xdsCache.Get(routeCache)
+		if exist && !features.EnableUnsafeAssertions {
+			return nil, resource, routeCache
+		}
 	}
 
 	vHostPortMap := make(map[int][]*route.VirtualHost)

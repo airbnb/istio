@@ -131,11 +131,17 @@ var (
 		monitoring.WithLabels(typeTag),
 	)
 
-	cacheGetTime = monitoring.NewDistribution(
-		"pilot_xds_cache_get_time",
-		"Total time in seconds Pilot takes to get from cache",
-		[]float64{.01, .1, 1, 3, 5, 10, 20, 30},
+	edsCacheGetTime = monitoring.NewDistribution(
+		"pilot_eds_cache_get_time",
+		"Total time in seconds Pilot takes to get from eds cache",
+		[]float64{.01, .1, .2, .5, 1, 3, 5, 10, 20, 30},
 		monitoring.WithLabels(typeTag),
+	)
+
+	buildEndpointsTime = monitoring.NewDistribution(
+		"pilot_xds_build_endpoints_time",
+		"Total time in seconds Pilot takes to build endpoints.",
+		[]float64{.01, .1, 1, 3, 5, 10, 20, 30},
 	)
 
 	sendTime = monitoring.NewDistribution(
@@ -288,7 +294,7 @@ func recordPushTime(xdsType string, duration time.Duration) {
 }
 
 func recordCacheGetTime(xdsType string, duration time.Duration) {
-	cacheGetTime.With(typeTag.Value(v3.GetMetricType(xdsType))).Record(duration.Seconds())
+	edsCacheGetTime.With(typeTag.Value(v3.GetMetricType(xdsType))).Record(duration.Seconds())
 }
 
 func init() {
@@ -304,7 +310,8 @@ func init() {
 		xdsResponseWriteTimeouts,
 		pushes,
 		pushTime,
-		cacheGetTime,
+		edsCacheGetTime,
+		buildEndpointsTime,
 		proxiesConvergeDelay,
 		proxiesQueueTime,
 		pushContextErrors,
