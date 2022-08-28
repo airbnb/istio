@@ -220,6 +220,9 @@ func (l *lruCache) assertInvalidPushRequest(entry XdsCacheEntry, req *PushReques
 }
 
 func (l *lruCache) Add(entry XdsCacheEntry, pushReq *PushRequest, value *discovery.Resource) {
+	t0 := time.Now()
+	defer cacheAddTime.Record(time.Since(t0).Seconds())
+
 	l.assertInvalidPushRequest(entry, pushReq)
 	if !entry.Cacheable() || pushReq == nil || pushReq.Start.Equal(time.Time{}) {
 		return
@@ -260,6 +263,8 @@ type cacheValue struct {
 }
 
 func (l *lruCache) Get(entry XdsCacheEntry) (*discovery.Resource, bool) {
+	t0 := time.Now()
+	defer cacheGetTime.Record(time.Since(t0).Seconds())
 	if !entry.Cacheable() {
 		return nil, false
 	}

@@ -16,11 +16,10 @@ package xds
 
 import (
 	"fmt"
-	"time"
-
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	any "google.golang.org/protobuf/types/known/anypb"
+	"time"
 
 	networkingapi "istio.io/api/networking/v1alpha3"
 	"istio.io/istio/pilot/pkg/features"
@@ -409,7 +408,10 @@ func (eds *EdsGenerator) Generate(proxy *model.Proxy, push *model.PushContext, w
 	if !edsNeedsPush(req.ConfigsUpdated) {
 		return nil, model.DefaultXdsLogDetails, nil
 	}
+
+	t0 := time.Now()
 	resources, logDetails := eds.buildEndpoints(proxy, push, req, w)
+	buildEndpointsTime.Record(time.Since(t0).Seconds())
 	return resources, logDetails, nil
 }
 
