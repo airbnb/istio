@@ -21,18 +21,19 @@ var (
 	cacheGetTime = monitoring.NewDistribution(
 		"pilot_xds_cache_get_time",
 		"Total time in seconds Pilot takes to get from cache",
-		[]float64{.01, .1, 1, 3, 5, 10, 20, 30},
+		[]float64{.001, .01, .05, .1, .5, 1, 3, 5, 10, 20, 30},
 	)
 
 	cacheAddTime = monitoring.NewDistribution(
 		"pilot_xds_cache_add_time",
 		"Total time in seconds Pilot takes to add into cache",
-		[]float64{.01, .1, 1, 3, 5, 10, 20, 30},
+		[]float64{.001, .01, .05, .1, .5, 1, 3, 5, 10, 20, 30},
 	)
 )
 
 func init() {
 	monitoring.MustRegister(
+		cacheAddTime,
 		cacheGetTime,
 	)
 }

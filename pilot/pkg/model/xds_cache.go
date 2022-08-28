@@ -221,7 +221,6 @@ func (l *lruCache) assertInvalidPushRequest(entry XdsCacheEntry, req *PushReques
 
 func (l *lruCache) Add(entry XdsCacheEntry, pushReq *PushRequest, value *discovery.Resource) {
 	t0 := time.Now()
-	defer cacheAddTime.Record(time.Since(t0).Seconds())
 
 	l.assertInvalidPushRequest(entry, pushReq)
 	if !entry.Cacheable() || pushReq == nil || pushReq.Start.Equal(time.Time{}) {
@@ -238,6 +237,7 @@ func (l *lruCache) Add(entry XdsCacheEntry, pushReq *PushRequest, value *discove
 		if token < cur.(cacheValue).token || token < l.token {
 			// entry may be stale, we need to drop it. This can happen when the cache is invalidated
 			// after we call Get.
+			cacheAddTime.Record(time.Since(t0).Seconds())
 			return
 		}
 		if l.enableAssertions {
@@ -246,6 +246,7 @@ func (l *lruCache) Add(entry XdsCacheEntry, pushReq *PushRequest, value *discove
 	}
 
 	if token < l.token {
+		cacheAddTime.Record(time.Since(t0).Seconds())
 		return
 	}
 
@@ -255,6 +256,7 @@ func (l *lruCache) Add(entry XdsCacheEntry, pushReq *PushRequest, value *discove
 	indexConfig(l.configIndex, k, entry)
 	indexType(l.typesIndex, k, entry)
 	size(l.store.Len())
+	cacheAddTime.Record(time.Since(t0).Seconds())
 }
 
 type cacheValue struct {
@@ -264,7 +266,6 @@ type cacheValue struct {
 
 func (l *lruCache) Get(entry XdsCacheEntry) (*discovery.Resource, bool) {
 	t0 := time.Now()
-	defer cacheGetTime.Record(time.Since(t0).Seconds())
 	if !entry.Cacheable() {
 		return nil, false
 	}
@@ -274,14 +275,17 @@ func (l *lruCache) Get(entry XdsCacheEntry) (*discovery.Resource, bool) {
 	val, ok := l.store.Get(k)
 	if !ok {
 		miss()
+		cacheGetTime.Record(time.Since(t0).Seconds())
 		return nil, false
 	}
 	cv := val.(cacheValue)
 	if cv.value == nil {
 		miss()
+		cacheGetTime.Record(time.Since(t0).Seconds())
 		return nil, false
 	}
 	hit()
+	cacheGetTime.Record(time.Since(t0).Seconds())
 	return cv.value, true
 }
 
