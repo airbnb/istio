@@ -19,6 +19,7 @@ import (
 
 	routepb "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	matcherpb "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/protobuf/testing/protocmp"
 )
@@ -146,6 +147,82 @@ func TestHostMatcher(t *testing.T) {
 				t.Errorf("expecting %v, but got %v", tc.Expect, actual)
 			}
 		})
+	}
+}
+
+func TestHeaderMatcherWithRegex(t *testing.T) {
+	testCases := []struct {
+		Name   string
+		K      string
+		V      string
+		Expect *routepb.HeaderMatcher
+	}{
+		{
+			Name: "exact match",
+			K:    ":path",
+			V:    "/productpage",
+			Expect: &routepb.HeaderMatcher{
+				Name: ":path",
+				HeaderMatchSpecifier: &routepb.HeaderMatcher_SafeRegexMatch{
+					SafeRegexMatch: &matcherpb.RegexMatcher{
+						EngineType: &matcherpb.RegexMatcher_GoogleRe2{
+							GoogleRe2: &matcherpb.RegexMatcher_GoogleRE2{},
+						},
+						Regex: "^/productpage$|^/productpage,.*|.*,/productpage,.*|.*,/productpage$",
+					},
+				},
+			},
+		},
+		{
+			Name: "suffix match",
+			K:    ":path",
+			V:    "*/productpage*",
+			Expect: &routepb.HeaderMatcher{
+				Name: ":path",
+				HeaderMatchSpecifier: &routepb.HeaderMatcher_SafeRegexMatch{
+					SafeRegexMatch: &matcherpb.RegexMatcher{
+						EngineType: &matcherpb.RegexMatcher_GoogleRe2{
+							GoogleRe2: &matcherpb.RegexMatcher_GoogleRE2{},
+						},
+						Regex: `^.*/productpage\*$|^.*/productpage\*,.*|.*,.*/productpage\*,.*|.*,.*/productpage\*$`,
+					},
+				},
+			},
+		},
+		{
+			Name: "prefix match",
+			K:    ":path",
+			V:    "/productpage*",
+			Expect: &routepb.HeaderMatcher{
+				Name: ":path",
+				HeaderMatchSpecifier: &routepb.HeaderMatcher_SafeRegexMatch{
+					SafeRegexMatch: &matcherpb.RegexMatcher{
+						EngineType: &matcherpb.RegexMatcher_GoogleRe2{
+							GoogleRe2: &matcherpb.RegexMatcher_GoogleRE2{},
+						},
+						Regex: `^/productpage.*$|^/productpage.*,.*|.*,/productpage.*,.*|.*,/productpage.*$`,
+					},
+				},
+			},
+		},
+		{
+			Name: "present match",
+			K:    ":path",
+			V:    "*",
+			Expect: &routepb.HeaderMatcher{
+				Name: ":path",
+				HeaderMatchSpecifier: &routepb.HeaderMatcher_PresentMatch{
+					PresentMatch: true,
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		actual := HeaderMatcherWithRegex(tc.K, tc.V)
+		if !cmp.Equal(tc.Expect, actual, protocmp.Transform()) {
+			t.Errorf("expecting %v, but got %v", tc.Expect, actual)
+		}
 	}
 }
 
