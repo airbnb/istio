@@ -177,10 +177,12 @@ typedConfig:
                 ids:
                 - header:
                     name: X-abc
-                    stringMatch:
-                      exact: abc1
+                    safeRegexMatch:
+                      googleRe2: {}
+                      regex: ^abc1$|^abc1,.*|.*,abc1,.*|.*,abc1$
                 - header:
                     name: X-abc
-                    stringMatch:
-                      exact: abc2
+                    safeRegexMatch:
+                      googleRe2: {}
+                      regex: ^abc2$|^abc2,.*|.*,abc2,.*|.*,abc2$
   shadowRulesStatPrefix: istio_dry_run_allow_
