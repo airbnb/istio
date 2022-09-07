@@ -147,16 +147,19 @@ typedConfig:
                 ids:
                 - header:
                     name: X-header
-                    stringMatch:
-                      exact: header
+                    safeRegexMatch:
+                      googleRe2: {}
+                      regex: ^header$|^header,.*|.*,header,.*|.*,header$
                 - header:
                     name: X-header
-                    stringMatch:
-                      prefix: header-prefix-
+                    safeRegexMatch:
+                      googleRe2: {}
+                      regex: ^header-prefix-.*$|^header-prefix-.*,.*|.*,header-prefix-.*,.*|.*,header-prefix-.*$
                 - header:
                     name: X-header
-                    stringMatch:
-                      suffix: -suffix-header
+                    safeRegexMatch:
+                      googleRe2: {}
+                      regex: ^.*-suffix-header$|^.*-suffix-header,.*|.*,.*-suffix-header,.*|.*,.*-suffix-header$
                 - header:
                     name: X-header
                     presentMatch: true
@@ -224,16 +227,19 @@ typedConfig:
                 ids:
                 - header:
                     name: X-header
-                    stringMatch:
-                      exact: header
+                    safeRegexMatch:
+                      googleRe2: {}
+                      regex: ^header$|^header,.*|.*,header,.*|.*,header$
                 - header:
                     name: X-header
-                    stringMatch:
-                      prefix: header-prefix-
+                    safeRegexMatch:
+                      googleRe2: {}
+                      regex: ^header-prefix-.*$|^header-prefix-.*,.*|.*,header-prefix-.*,.*|.*,header-prefix-.*$
                 - header:
                     name: X-header
-                    stringMatch:
-                      suffix: -suffix-header
+                    safeRegexMatch:
+                      googleRe2: {}
+                      regex: ^.*-suffix-header$|^.*-suffix-header,.*|.*,.*-suffix-header,.*|.*,.*-suffix-header$
                 - header:
                     name: X-header
                     presentMatch: true

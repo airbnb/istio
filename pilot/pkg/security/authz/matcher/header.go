@@ -15,6 +15,7 @@
 package matcher
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -111,6 +112,40 @@ func HostMatcher(k, v string) *routepb.HeaderMatcher {
 		Name: k,
 		HeaderMatchSpecifier: &routepb.HeaderMatcher_StringMatch{
 			StringMatch: StringMatcherExact(v, true),
+		},
+	}
+}
+
+// HeaderMatcherWithRegex converts a key, value string pair to a corresponding
+// HeaderMatcher using regex to support the inline multi-values header that is
+// concatenated by commas, as per RFC7230.
+func HeaderMatcherWithRegex(k, v string) *routepb.HeaderMatcher {
+	// We must check "*" first to distinguish present match from the other
+	// cases.
+	var regex string
+	if v == "*" {
+		return &routepb.HeaderMatcher{
+			Name: k,
+			HeaderMatchSpecifier: &routepb.HeaderMatcher_PresentMatch{
+				PresentMatch: true,
+			},
+		}
+	} else if strings.HasPrefix(v, "*") {
+		regex = `.*` + regexp.QuoteMeta(v[1:])
+	} else if strings.HasSuffix(v, "*") {
+		regex = regexp.QuoteMeta(v[:len(v)-1]) + `.*`
+	} else {
+		regex = regexp.QuoteMeta(v)
+	}
+	return &routepb.HeaderMatcher{
+		Name: k,
+		HeaderMatchSpecifier: &routepb.HeaderMatcher_SafeRegexMatch{
+			SafeRegexMatch: &matcher.RegexMatcher{
+				EngineType: &matcher.RegexMatcher_GoogleRe2{
+					GoogleRe2: &matcher.RegexMatcher_GoogleRE2{},
+				},
+				Regex: fmt.Sprintf(`^%s$|^%s,.*|.*,%s,.*|.*,%s$`, regex, regex, regex, regex),
+			},
 		},
 	}
 }

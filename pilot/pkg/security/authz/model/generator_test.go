@@ -413,8 +413,9 @@ func TestGenerator(t *testing.T) {
 			want: yamlPrincipal(t, `
         header:
           name: x-foo
-          stringMatch:
-            exact: foo`),
+          safeRegexMatch:
+            googleRe2: {}
+            regex: ^foo$|^foo,.*|.*,foo,.*|.*,foo$`),
 		},
 		{
 			name:  "requestClaimGenerator",
