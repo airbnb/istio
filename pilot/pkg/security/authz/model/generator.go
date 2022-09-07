@@ -300,7 +300,8 @@ func (requestHeaderGenerator) principal(key, value string, forTCP bool, _ bool) 
 	if err != nil {
 		return nil, err
 	}
-	m := matcher.HeaderMatcher(header, value)
+
+	m := matcher.HeaderMatcherWithRegex(header, value)
 	return principalHeader(m), nil
 }
 
