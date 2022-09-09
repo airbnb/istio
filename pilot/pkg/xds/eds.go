@@ -216,14 +216,6 @@ func (s *DiscoveryServer) deleteEndpointShards(shard model.ShardKey, serviceName
 		epShards := s.EndpointShardsByService[serviceName][namespace]
 		epShards.mutex.Lock()
 		delete(epShards.Shards, shard)
-		epShards.ServiceAccounts = sets.Set{}
-		for _, shard := range epShards.Shards {
-			for _, ep := range shard {
-				if ep.ServiceAccount != "" {
-					epShards.ServiceAccounts.Insert(ep.ServiceAccount)
-				}
-			}
-		}
 		// Clear the cache here to avoid race in cache writes (see edsCacheUpdate for details).
 		s.Cache.Clear(map[model.ConfigKey]struct{}{{
 			Kind:      gvk.ServiceEntry,
