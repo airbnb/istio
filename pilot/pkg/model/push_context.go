@@ -1211,7 +1211,10 @@ func (ps *PushContext) updateContext(
 		}
 	}
 
+	log.Infof("[Ying] handle service change")
+	t := time.Now()
 	if servicesChanged {
+		log.Infof("[Ying] services changed")
 		// Services have changed. initialize service registry
 		if err := ps.initServiceRegistry(env); err != nil {
 			return err
@@ -1221,39 +1224,59 @@ func (ps *PushContext) updateContext(
 		ps.ServiceIndex = oldPushContext.ServiceIndex
 		ps.ServiceAccounts = oldPushContext.ServiceAccounts
 	}
+	log.Infof("[Ying] handle service change took %d seconds", time.Since(t).Seconds())
 
+	log.Infof("[Ying] handle k8s gateway change")
+	t = time.Now()
 	if servicesChanged || gatewayAPIChanged {
+		log.Infof("[Ying] k8s gateways changed")
 		// Gateway status depends on services, so recompute if they change as well
 		if err := ps.initKubernetesGateways(env); err != nil {
 			return err
 		}
 	}
+	log.Infof("[Ying] handle k8s gateway change took %d seconds", time.Since(t).Seconds())
 
+	log.Infof("[Ying] handle virtual service change")
+	t = time.Now()
 	if virtualServicesChanged {
+		log.Infof("[Ying] virtual services changed")
 		if err := ps.initVirtualServices(env); err != nil {
 			return err
 		}
 	} else {
 		ps.virtualServiceIndex = oldPushContext.virtualServiceIndex
 	}
+	log.Infof("[Ying] handle virtual service change took %d seconds", time.Since(t).Seconds())
 
+	log.Infof("[Ying] handle destination rule change")
+	t = time.Now()
 	if destinationRulesChanged {
+		log.Infof("[Ying] destination rules changed")
 		if err := ps.initDestinationRules(env); err != nil {
 			return err
 		}
 	} else {
 		ps.destinationRuleIndex = oldPushContext.destinationRuleIndex
 	}
+	log.Infof("[Ying] handle destination rule change took %d seconds", time.Since(t).Seconds())
 
+	log.Infof("[Ying] handle authn change")
+	t = time.Now()
 	if authnChanged {
+		log.Infof("[Ying] authn changed")
 		if err := ps.initAuthnPolicies(env); err != nil {
 			return err
 		}
 	} else {
 		ps.AuthnPolicies = oldPushContext.AuthnPolicies
 	}
+	log.Infof("[Ying] handle authn change took %d seconds", time.Since(t).Seconds())
 
+	log.Infof("[Ying] handle authz change")
+	t = time.Now()
 	if authzChanged {
+		log.Infof("[Ying] authz changed")
 		if err := ps.initAuthorizationPolicies(env); err != nil {
 			authzLog.Errorf("failed to initialize authorization policies: %v", err)
 			return err
@@ -1261,56 +1284,81 @@ func (ps *PushContext) updateContext(
 	} else {
 		ps.AuthzPolicies = oldPushContext.AuthzPolicies
 	}
+	log.Infof("[Ying] handle authz change took %d seconds", time.Since(t).Seconds())
 
+	log.Infof("[Ying] handle telemetry change")
+	t = time.Now()
 	if telemetryChanged {
+		log.Infof("[Ying] telemetry changed")
 		if err := ps.initTelemetry(env); err != nil {
 			return err
 		}
 	} else {
 		ps.Telemetry = oldPushContext.Telemetry
 	}
+	log.Infof("[Ying] handle telemetry change took %d seconds", time.Since(t).Seconds())
 
+	log.Infof("[Ying] handle proxy config change")
+	t = time.Now()
 	if proxyConfigsChanged {
+		log.Infof("[Ying] proxy config changed")
 		if err := ps.initProxyConfigs(env); err != nil {
 			return err
 		}
 	} else {
 		ps.ProxyConfigs = oldPushContext.ProxyConfigs
 	}
+	log.Infof("[Ying] handle proxy config change took %d seconds", time.Since(t).Seconds())
 
+	log.Infof("[Ying] handle wasm plugin change")
+	t = time.Now()
 	if wasmPluginsChanged {
+		log.Infof("[Ying] wasm plugin changed")
 		if err := ps.initWasmPlugins(env); err != nil {
 			return err
 		}
 	} else {
 		ps.wasmPluginsByNamespace = oldPushContext.wasmPluginsByNamespace
 	}
+	log.Infof("[Ying] handle wasm plugin change took %d seconds", time.Since(t).Seconds())
 
+	log.Infof("[Ying] handle envoy filter change")
+	t = time.Now()
 	if envoyFiltersChanged {
+		log.Infof("[Ying] envoy filter changed")
 		if err := ps.initEnvoyFilters(env); err != nil {
 			return err
 		}
 	} else {
 		ps.envoyFiltersByNamespace = oldPushContext.envoyFiltersByNamespace
 	}
+	log.Infof("[Ying] handle envoy filter change took %d seconds", time.Since(t).Seconds())
 
+	log.Infof("[Ying] handle gateway change")
+	t = time.Now()
 	if gatewayChanged {
+		log.Infof("[Ying] gateway changed")
 		if err := ps.initGateways(env); err != nil {
 			return err
 		}
 	} else {
 		ps.gatewayIndex = oldPushContext.gatewayIndex
 	}
+	log.Infof("[Ying] handle gateway change took %d seconds", time.Since(t).Seconds())
 
+	log.Infof("[Ying] handle sidecar scope change")
+	t = time.Now()
 	// Must be initialized in the end
 	// Sidecars need to be updated if services, virtual services, destination rules, or the sidecar configs change
 	if servicesChanged || virtualServicesChanged || destinationRulesChanged || sidecarsChanged {
+		log.Infof("[Ying] sidecar scope changed")
 		if err := ps.initSidecarScopes(env); err != nil {
 			return err
 		}
 	} else {
 		ps.sidecarIndex.sidecarsByNamespace = oldPushContext.sidecarIndex.sidecarsByNamespace
 	}
+	log.Infof("[Ying] handle sidecar scope change took %d seconds", time.Since(t).Seconds())
 
 	return nil
 }
