@@ -1224,7 +1224,7 @@ func (ps *PushContext) updateContext(
 		ps.ServiceIndex = oldPushContext.ServiceIndex
 		ps.ServiceAccounts = oldPushContext.ServiceAccounts
 	}
-	log.Infof("[Ying] handle service change took %d seconds", time.Since(t).Seconds())
+	log.Infof("[Ying] handle service change took %v seconds", time.Since(t))
 
 	log.Infof("[Ying] handle k8s gateway change")
 	t = time.Now()
@@ -1235,7 +1235,7 @@ func (ps *PushContext) updateContext(
 			return err
 		}
 	}
-	log.Infof("[Ying] handle k8s gateway change took %d seconds", time.Since(t).Seconds())
+	log.Infof("[Ying] handle k8s gateway change took %v seconds", time.Since(t))
 
 	log.Infof("[Ying] handle virtual service change")
 	t = time.Now()
@@ -1247,7 +1247,7 @@ func (ps *PushContext) updateContext(
 	} else {
 		ps.virtualServiceIndex = oldPushContext.virtualServiceIndex
 	}
-	log.Infof("[Ying] handle virtual service change took %d seconds", time.Since(t).Seconds())
+	log.Infof("[Ying] handle virtual service change took %v seconds", time.Since(t))
 
 	log.Infof("[Ying] handle destination rule change")
 	t = time.Now()
@@ -1259,7 +1259,7 @@ func (ps *PushContext) updateContext(
 	} else {
 		ps.destinationRuleIndex = oldPushContext.destinationRuleIndex
 	}
-	log.Infof("[Ying] handle destination rule change took %d seconds", time.Since(t).Seconds())
+	log.Infof("[Ying] handle destination rule change took %v seconds", time.Since(t))
 
 	log.Infof("[Ying] handle authn change")
 	t = time.Now()
@@ -1271,7 +1271,7 @@ func (ps *PushContext) updateContext(
 	} else {
 		ps.AuthnPolicies = oldPushContext.AuthnPolicies
 	}
-	log.Infof("[Ying] handle authn change took %d seconds", time.Since(t).Seconds())
+	log.Infof("[Ying] handle authn change took %v seconds", time.Since(t))
 
 	log.Infof("[Ying] handle authz change")
 	t = time.Now()
@@ -1284,7 +1284,7 @@ func (ps *PushContext) updateContext(
 	} else {
 		ps.AuthzPolicies = oldPushContext.AuthzPolicies
 	}
-	log.Infof("[Ying] handle authz change took %d seconds", time.Since(t).Seconds())
+	log.Infof("[Ying] handle authz change took %v seconds", time.Since(t))
 
 	log.Infof("[Ying] handle telemetry change")
 	t = time.Now()
@@ -1296,7 +1296,7 @@ func (ps *PushContext) updateContext(
 	} else {
 		ps.Telemetry = oldPushContext.Telemetry
 	}
-	log.Infof("[Ying] handle telemetry change took %d seconds", time.Since(t).Seconds())
+	log.Infof("[Ying] handle telemetry change took %v seconds", time.Since(t))
 
 	log.Infof("[Ying] handle proxy config change")
 	t = time.Now()
@@ -1308,7 +1308,7 @@ func (ps *PushContext) updateContext(
 	} else {
 		ps.ProxyConfigs = oldPushContext.ProxyConfigs
 	}
-	log.Infof("[Ying] handle proxy config change took %d seconds", time.Since(t).Seconds())
+	log.Infof("[Ying] handle proxy config change took %v seconds", time.Since(t))
 
 	log.Infof("[Ying] handle wasm plugin change")
 	t = time.Now()
@@ -1320,7 +1320,7 @@ func (ps *PushContext) updateContext(
 	} else {
 		ps.wasmPluginsByNamespace = oldPushContext.wasmPluginsByNamespace
 	}
-	log.Infof("[Ying] handle wasm plugin change took %d seconds", time.Since(t).Seconds())
+	log.Infof("[Ying] handle wasm plugin change took %v seconds", time.Since(t))
 
 	log.Infof("[Ying] handle envoy filter change")
 	t = time.Now()
@@ -1332,7 +1332,7 @@ func (ps *PushContext) updateContext(
 	} else {
 		ps.envoyFiltersByNamespace = oldPushContext.envoyFiltersByNamespace
 	}
-	log.Infof("[Ying] handle envoy filter change took %d seconds", time.Since(t).Seconds())
+	log.Infof("[Ying] handle envoy filter change took %v seconds", time.Since(t))
 
 	log.Infof("[Ying] handle gateway change")
 	t = time.Now()
@@ -1344,7 +1344,7 @@ func (ps *PushContext) updateContext(
 	} else {
 		ps.gatewayIndex = oldPushContext.gatewayIndex
 	}
-	log.Infof("[Ying] handle gateway change took %d seconds", time.Since(t).Seconds())
+	log.Infof("[Ying] handle gateway change took %v seconds", time.Since(t))
 
 	log.Infof("[Ying] handle sidecar scope change")
 	t = time.Now()
@@ -1358,7 +1358,7 @@ func (ps *PushContext) updateContext(
 	} else {
 		ps.sidecarIndex.sidecarsByNamespace = oldPushContext.sidecarIndex.sidecarsByNamespace
 	}
-	log.Infof("[Ying] handle sidecar scope change took %d seconds", time.Since(t).Seconds())
+	log.Infof("[Ying] handle sidecar scope change took %v seconds", time.Since(t))
 
 	return nil
 }
@@ -1618,12 +1618,16 @@ func (ps *PushContext) initDefaultExportMaps() {
 // with the proxy and derive listeners/routes/clusters based on the sidecar
 // scope.
 func (ps *PushContext) initSidecarScopes(env *Environment) error {
+	t := time.Now()
 	sidecarConfigs, err := env.List(gvk.Sidecar, NamespaceAll)
 	if err != nil {
 		return err
 	}
+	log.Infof("[Ying] list sidecar configs (%d) took %v seconds", len(sidecarConfigs), time.Since(t))
 
+	t = time.Now()
 	sortConfigByCreationTime(sidecarConfigs)
+	log.Infof("[Ying] initSidecarScopes sort took %v seconds", time.Since(t))
 
 	sidecarConfigWithSelector := make([]config.Config, 0)
 	sidecarConfigWithoutSelector := make([]config.Config, 0)
@@ -1644,6 +1648,7 @@ func (ps *PushContext) initSidecarScopes(env *Environment) error {
 	sidecarConfigs = append(sidecarConfigs, sidecarConfigWithSelector...)
 	sidecarConfigs = append(sidecarConfigs, sidecarConfigWithoutSelector...)
 
+	t = time.Now()
 	// Hold reference root namespace's sidecar config
 	// Root namespace can have only one sidecar config object
 	// Currently we expect that it has no workloadSelectors
@@ -1658,6 +1663,7 @@ func (ps *PushContext) initSidecarScopes(env *Environment) error {
 		}
 	}
 	ps.sidecarIndex.rootConfig = rootNSConfig
+	log.Infof("[Ying] populate sidecarIndex took %v seconds", time.Since(t))
 
 	return nil
 }
