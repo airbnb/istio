@@ -15,11 +15,68 @@
 package model
 
 import (
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"istio.io/istio/pilot/pkg/serviceregistry/provider"
+	"istio.io/istio/pkg/cluster"
+	"istio.io/istio/pkg/config/visibility"
 	"testing"
 
 	"istio.io/istio/pkg/config/host"
 	"istio.io/istio/pkg/config/labels"
 )
+
+func TestServiceAttributesDeepCopy(t *testing.T) {
+	sa := ServiceAttributes{
+		ServiceRegistry: provider.Kubernetes,
+		Name:            "istio-ingressgateway",
+		Namespace:       "istio-system",
+		Labels:          map[string]string{"app": "test-app"},
+		ExportTo:        map[visibility.Instance]bool{visibility.None: true},
+		LabelSelectors:  map[string]string{"app": "test-app"},
+		ClusterExternalAddresses: AddressMap{
+			Addresses: map[cluster.ID][]string{
+				"Kubernetes": {"1.2.3.4"},
+			},
+		},
+		ClusterExternalPorts: map[cluster.ID]map[uint32]uint32{
+			"cluster-1": {
+				8080: 8081,
+			},
+		},
+	}
+
+	copied := sa.DeepCopy()
+	if diff := cmp.Diff(copied, sa, cmpopts.IgnoreUnexported(AddressMap{})); diff != "" {
+		t.Fatalf("cloned service attributes is not identical: %v", diff)
+	}
+
+	copied.Labels["app"] = "cloned-app"
+	if sa.Labels["app"] == copied.Labels["app"] {
+		t.Fatalf("did not deep copy labels")
+	}
+
+	copied.ExportTo[visibility.None] = false
+	if sa.ExportTo[visibility.None] == copied.ExportTo[visibility.None] {
+		t.Fatalf("did not deep copy export to")
+	}
+
+	copied.LabelSelectors["app"] = "cloned-app"
+	if sa.LabelSelectors["app"] == copied.LabelSelectors["app"] {
+		t.Fatalf("did not deep copy label selector")
+	}
+
+	copiedAddressMap := copied.ClusterExternalAddresses
+	copiedAddressMap.Addresses["Kubernetes"] = append(copiedAddressMap.Addresses["Kubernetes"], "5.6.7.8")
+	if len(sa.ClusterExternalAddresses.Addresses["Kubernetes"]) != 1 {
+		t.Errorf("did not deep copy address map")
+	}
+
+	copied.ClusterExternalPorts["cluster-1"][9090] = 9091
+	if len(sa.ClusterExternalPorts["cluster-1"]) != 1 {
+		t.Errorf("did not deep copy cluster external ports")
+	}
+}
 
 func TestGetByPort(t *testing.T) {
 	ports := PortList{{

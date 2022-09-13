@@ -1342,49 +1342,6 @@ func TestCreateSidecarScope(t *testing.T) {
 			},
 		},
 		{
-			"virtual-service-destinations-matching-http-virtual-service-ports",
-			configs21,
-			services21,
-			virtualServices3,
-			[]*Service{
-				{
-					Hostname: "baz.svc.cluster.local",
-					Ports:    port7000,
-				},
-				{
-					Hostname: "foo.svc.cluster.local",
-					Ports:    port7000,
-				},
-			},
-			nil,
-		},
-		{
-			"virtual-service-destinations-matching-tcp-virtual-service-ports",
-			configs21,
-			services21,
-			virtualServices4,
-			[]*Service{
-				{
-					Hostname: "baz.svc.cluster.local",
-					Ports:    port7000,
-				},
-			},
-			nil,
-		},
-		{
-			"virtual-service-destinations-matching-tls-virtual-service-ports",
-			configs21,
-			services21,
-			virtualServices5,
-			[]*Service{
-				{
-					Hostname: "baz.svc.cluster.local",
-					Ports:    port7000,
-				},
-			},
-			nil,
-		},
-		{
 			"virtual-service-prefer-required",
 			configs12,
 			services12,
@@ -1465,14 +1422,6 @@ func TestCreateSidecarScope(t *testing.T) {
 					Ports:    port7443,
 				},
 			},
-		},
-		{
-			"virtual-service-destination-port-missing-from-service",
-			configs21,
-			services22,
-			virtualServices3,
-			[]*Service{},
-			nil,
 		},
 		{
 			"virtual-service-2-match-service",

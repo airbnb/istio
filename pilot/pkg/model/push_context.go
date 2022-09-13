@@ -1372,6 +1372,7 @@ func (ps *PushContext) initServiceRegistry(env *Environment) error {
 	}
 	// Sort the services in order of creation.
 	allServices := SortServicesByCreationTime(services)
+	log.Infof("[Ying] initServiceRegistry total service (%d)", len(allServices))
 	for _, s := range allServices {
 		svcKey := s.Key()
 		// Precache instances
