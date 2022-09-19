@@ -281,18 +281,17 @@ func ConvertToSidecarScope(ps *PushContext, sidecarConfig *config.Config, config
 		egressConfigs = append(egressConfigs, &networking.IstioEgressListener{Hosts: []string{"*/*"}})
 	}
 	out.EgressListeners = make([]*IstioEgressListenerWrapper, 0, len(egressConfigs))
-	dummyNode := Proxy{
-		ConfigNamespace: configNamespace,
-	}
-	vses := ps.VirtualServicesForGateway(&dummyNode, constants.IstioMeshGateway)
 	for _, e := range egressConfigs {
 		out.EgressListeners = append(out.EgressListeners,
-			convertIstioListenerToWrapper(ps, configNamespace, e, vses))
+			convertIstioListenerToWrapper(ps, configNamespace, e))
 	}
 
 	// Now collect all the imported services across all egress listeners in
 	// this sidecar crd. This is needed to generate CDS output
 	out.services = make([]*Service, 0)
+	dummyNode := Proxy{
+		ConfigNamespace: configNamespace,
+	}
 
 	type serviceIndex struct {
 		svc   *Service
@@ -438,7 +437,7 @@ func ConvertToSidecarScope(ps *PushContext, sidecarConfig *config.Config, config
 }
 
 func convertIstioListenerToWrapper(ps *PushContext, configNamespace string,
-	istioListener *networking.IstioEgressListener, virtualServices []config.Config) *IstioEgressListenerWrapper {
+	istioListener *networking.IstioEgressListener) *IstioEgressListenerWrapper {
 	out := &IstioEgressListenerWrapper{
 		IstioListener: istioListener,
 	}
@@ -463,7 +462,10 @@ func convertIstioListenerToWrapper(ps *PushContext, configNamespace string,
 		ConfigNamespace: configNamespace,
 	}
 
-	out.virtualServices = SelectVirtualServices(virtualServices, out.listenerHosts)
+	private := ps.virtualServiceIndex.privateByNamespaceAndGateway[configNamespace][constants.IstioMeshGateway]
+	exportTo := ps.virtualServiceIndex.exportedToNamespaceByGateway[configNamespace][constants.IstioMeshGateway]
+	public := ps.virtualServiceIndex.publicByGateway[constants.IstioMeshGateway]
+	out.virtualServices = SelectVirtualServices(private, exportTo, public, out.listenerHosts)
 	svces := ps.Services(&dummyNode)
 	out.services = out.selectServices(svces, configNamespace, out.listenerHosts)
 
