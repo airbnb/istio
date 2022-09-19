@@ -281,17 +281,18 @@ func ConvertToSidecarScope(ps *PushContext, sidecarConfig *config.Config, config
 		egressConfigs = append(egressConfigs, &networking.IstioEgressListener{Hosts: []string{"*/*"}})
 	}
 	out.EgressListeners = make([]*IstioEgressListenerWrapper, 0, len(egressConfigs))
+	dummyNode := Proxy{
+		ConfigNamespace: configNamespace,
+	}
+	vses := ps.VirtualServicesForGateway(&dummyNode, constants.IstioMeshGateway)
 	for _, e := range egressConfigs {
 		out.EgressListeners = append(out.EgressListeners,
-			convertIstioListenerToWrapper(ps, configNamespace, e))
+			convertIstioListenerToWrapper(ps, configNamespace, e, vses))
 	}
 
 	// Now collect all the imported services across all egress listeners in
 	// this sidecar crd. This is needed to generate CDS output
 	out.services = make([]*Service, 0)
-	dummyNode := Proxy{
-		ConfigNamespace: configNamespace,
-	}
 
 	type serviceIndex struct {
 		svc   *Service
@@ -437,7 +438,7 @@ func ConvertToSidecarScope(ps *PushContext, sidecarConfig *config.Config, config
 }
 
 func convertIstioListenerToWrapper(ps *PushContext, configNamespace string,
-	istioListener *networking.IstioEgressListener) *IstioEgressListenerWrapper {
+	istioListener *networking.IstioEgressListener, virtualServices []config.Config) *IstioEgressListenerWrapper {
 	out := &IstioEgressListenerWrapper{
 		IstioListener: istioListener,
 	}
@@ -462,8 +463,7 @@ func convertIstioListenerToWrapper(ps *PushContext, configNamespace string,
 		ConfigNamespace: configNamespace,
 	}
 
-	vses := ps.VirtualServicesForGateway(&dummyNode, constants.IstioMeshGateway)
-	out.virtualServices = SelectVirtualServices(vses, out.listenerHosts)
+	out.virtualServices = SelectVirtualServices(virtualServices, out.listenerHosts)
 	svces := ps.Services(&dummyNode)
 	out.services = out.selectServices(svces, configNamespace, out.listenerHosts)
 
