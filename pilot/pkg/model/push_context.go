@@ -1655,15 +1655,33 @@ func (ps *PushContext) initSidecarScopes(env *Environment) error {
 	// Currently we expect that it has no workloadSelectors
 	var rootNSConfig *config.Config
 	ps.sidecarIndex.sidecarsByNamespace = make(map[string][]*SidecarScope, sidecarNum)
+
 	for i, sidecarConfig := range sidecarConfigs {
-		ps.sidecarIndex.sidecarsByNamespace[sidecarConfig.Namespace] = append(ps.sidecarIndex.sidecarsByNamespace[sidecarConfig.Namespace],
-			ConvertToSidecarScope(ps, &sidecarConfig, sidecarConfig.Namespace))
 		if rootNSConfig == nil && sidecarConfig.Namespace == ps.Mesh.RootNamespace &&
 			sidecarConfig.Spec.(*networking.Sidecar).WorkloadSelector == nil {
 			rootNSConfig = &sidecarConfigs[i]
 		}
 	}
 	ps.sidecarIndex.rootConfig = rootNSConfig
+
+	ch := make(chan *SidecarScope)
+	var wg sync.WaitGroup
+	for _, sidecarConfig := range sidecarConfigs {
+		go func(c config.Config) {
+			defer wg.Done()
+			ch <- ConvertToSidecarScope(ps, &sidecarConfig, sidecarConfig.Namespace)
+		}(sidecarConfig)
+	}
+
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	for sidecarScope := range ch {
+		ps.sidecarIndex.sidecarsByNamespace[sidecarScope.Namespace] = append(ps.sidecarIndex.sidecarsByNamespace[sidecarScope.Namespace], sidecarScope)
+	}
+	
 	log.Infof("[Ying] populate sidecarIndex took %v seconds", time.Since(t))
 
 	return nil
