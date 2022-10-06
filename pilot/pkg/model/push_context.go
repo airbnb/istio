@@ -1664,14 +1664,31 @@ func (ps *PushContext) initSidecarScopes(env *Environment) error {
 	}
 	ps.sidecarIndex.rootConfig = rootNSConfig
 
+	numWorkers := 100
+	configsPerWorker := len(sidecarConfigs) / 100
+	if configsPerWorker == 0 {
+		configsPerWorker = 1
+	}
+
 	ch := make(chan *SidecarScope)
+
 	var wg sync.WaitGroup
-	wg.Add(len(sidecarConfigs))
-	for _, sidecarConfig := range sidecarConfigs {
-		go func(c config.Config) {
+	wg.Add(numWorkers)
+	for i := 0; i < numWorkers; i++ {
+		go func(i int) {
 			defer wg.Done()
-			ch <- ConvertToSidecarScope(ps, &sidecarConfig, sidecarConfig.Namespace)
-		}(sidecarConfig)
+			// [start,end)
+			start := i * configsPerWorker
+			end := (i + 1) * configsPerWorker
+			if len(sidecarConfigs) < end {
+				end = len(sidecarConfigs)
+			}
+
+			for j := start; j < end; j++ {
+				c := sidecarConfigs[j]
+				ch <- ConvertToSidecarScope(ps, &c, c.Namespace)
+			}
+		}(i)
 	}
 
 	go func() {
