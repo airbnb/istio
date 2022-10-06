@@ -1666,6 +1666,7 @@ func (ps *PushContext) initSidecarScopes(env *Environment) error {
 
 	ch := make(chan *SidecarScope)
 	var wg sync.WaitGroup
+	wg.Add(len(sidecarConfigs))
 	for _, sidecarConfig := range sidecarConfigs {
 		go func(c config.Config) {
 			defer wg.Done()
@@ -1681,7 +1682,7 @@ func (ps *PushContext) initSidecarScopes(env *Environment) error {
 	for sidecarScope := range ch {
 		ps.sidecarIndex.sidecarsByNamespace[sidecarScope.Namespace] = append(ps.sidecarIndex.sidecarsByNamespace[sidecarScope.Namespace], sidecarScope)
 	}
-	
+
 	log.Infof("[Ying] populate sidecarIndex took %v seconds", time.Since(t))
 
 	return nil
