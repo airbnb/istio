@@ -75,6 +75,7 @@ func (s *DiscoveryServer) StreamDeltas(stream DeltaDiscoveryStream) error {
 		log.Debugf("Unauthenticated XDS: %v", peerAddr)
 	}
 
+	log.Info("[Ying] Init context called in StreamDeltas")
 	// InitContext returns immediately if the context was already initialized.
 	if err = s.globalPushContext().InitContext(s.Env, s.pushContextWorkerPool, nil, nil); err != nil {
 		// Error accessing the data - log and close, maybe a different pilot replica

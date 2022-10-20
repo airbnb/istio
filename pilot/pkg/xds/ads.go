@@ -290,7 +290,7 @@ func (s *DiscoveryServer) Stream(stream DiscoveryStream) error {
 		log.Debugf("Unauthenticated XDS: %s", peerAddr)
 	}
 
-	log.Info("[Ying] Init context called")
+	log.Info("[Ying] Init context called in Stream")
 	// InitContext returns immediately if the context was already initialized.
 	if err = s.globalPushContext().InitContext(s.Env, s.pushContextWorkerPool, nil, nil); err != nil {
 		// Error accessing the data - log and close, maybe a different pilot replica

@@ -1082,6 +1082,10 @@ func (ps *PushContext) IsClusterLocal(service *Service) bool {
 // This should be called before starting the push, from the thread creating
 // the push context.
 func (ps *PushContext) InitContext(env *Environment, wp *PushContextWorkerPool, oldPushContext *PushContext, pushReq *PushRequest) error {
+	log.Infof("[Ying] init context called, wp nil? %t", wp == nil)
+	if wp != nil {
+		log.Infof("[Ying] init context called, wp started? %t", wp.Started())
+	}
 	// Acquire a lock to ensure we don't concurrently initialize the same PushContext.
 	// If this does happen, one thread will block then exit early from InitDone=true
 	ps.initializeMutex.Lock()
@@ -2293,6 +2297,8 @@ type PushContextWorkerPool struct {
 	workerCount int
 
 	workQueue chan func()
+
+	started bool
 }
 
 func NewPushContextWorkerPool(workerCount int) *PushContextWorkerPool {
@@ -2308,8 +2314,8 @@ func NewPushContextWorkerPool(workerCount int) *PushContextWorkerPool {
 	return pool
 }
 
-func (p *PushContextWorkerPool) GetWorkerCount() int {
-	return p.workerCount
+func (p *PushContextWorkerPool) Started() bool {
+	return p.started
 }
 
 func (p *PushContextWorkerPool) PushWork(w func()) {
@@ -2317,6 +2323,7 @@ func (p *PushContextWorkerPool) PushWork(w func()) {
 }
 
 func (p *PushContextWorkerPool) Run(stop <-chan struct{}) {
+	p.started = true
 	for i := 0; i < p.workerCount; i++ {
 		go func() {
 			for {
