@@ -76,7 +76,7 @@ func (s *DiscoveryServer) StreamDeltas(stream DeltaDiscoveryStream) error {
 	}
 
 	// InitContext returns immediately if the context was already initialized.
-	if err = s.globalPushContext().InitContext(s.Env, nil, nil); err != nil {
+	if err = s.globalPushContext().InitContext(s.Env, s.pushContextWorkerPool, nil, nil); err != nil {
 		// Error accessing the data - log and close, maybe a different pilot replica
 		// has more luck
 		log.Warnf("Error reading config %v", err)

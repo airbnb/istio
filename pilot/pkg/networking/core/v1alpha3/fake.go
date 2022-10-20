@@ -178,7 +178,7 @@ func NewConfigGenTest(t test.Failer, opts TestOptions) *ConfigGenTest {
 		if err := env.InitNetworksManager(&FakeXdsUpdater{}); err != nil {
 			t.Fatal(err)
 		}
-		if err := env.PushContext.InitContext(env, nil, nil); err != nil {
+		if err := env.PushContext.InitContext(env, nil, nil, nil); err != nil {
 			t.Fatalf("Failed to initialize push context: %v", err)
 		}
 	}

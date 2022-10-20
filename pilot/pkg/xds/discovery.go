@@ -122,6 +122,10 @@ type DiscoveryServer struct {
 	// mutex used for protecting Environment.PushContext
 	updateMutex sync.RWMutex
 
+	// pushContextWorkerPool is used for calculating push context. Right now
+	// only sidecar scope calculation uses it.
+	pushContextWorkerPool *model.PushContextWorkerPool
+
 	// pushQueue is the buffer that used after debounce and before the real xds push.
 	pushQueue *PushQueue
 
@@ -195,6 +199,7 @@ func NewDiscoveryServer(env *model.Environment, plugins []string, instanceID str
 		InboundUpdates:          atomic.NewInt64(0),
 		CommittedUpdates:        atomic.NewInt64(0),
 		pushChannel:             make(chan *model.PushRequest, 10),
+		pushContextWorkerPool:   model.NewPushContextWorkerPool(10),
 		pushQueue:               NewPushQueue(),
 		debugHandlers:           map[string]string{},
 		adsClients:              map[string]*Connection{},
@@ -396,6 +401,8 @@ func (s *DiscoveryServer) ConfigUpdate(req *model.PushRequest) {
 // It ensures that at minimum minQuiet time has elapsed since the last event before processing it.
 // It also ensures that at most maxDelay is elapsed between receiving an event and processing it.
 func (s *DiscoveryServer) handleUpdates(stopCh <-chan struct{}) {
+	s.pushContextWorkerPool.Run(stopCh)
+	log.Info("[Ying] push context worker pool started")
 	debounce(s.pushChannel, stopCh, s.debounceOptions, s.Push, s.CommittedUpdates)
 }
 
@@ -552,7 +559,7 @@ func (s *DiscoveryServer) initPushContext(req *model.PushRequest, oldPushContext
 	push := model.NewPushContext()
 	push.PushVersion = version
 	push.JwtKeyResolver = s.JwtKeyResolver
-	if err := push.InitContext(s.Env, oldPushContext, req); err != nil {
+	if err := push.InitContext(s.Env, s.pushContextWorkerPool, oldPushContext, req); err != nil {
 		log.Errorf("XDS: failed to init push context: %v", err)
 		// We can't push if we can't read the data - stick with previous version.
 		pushContextErrors.Increment()

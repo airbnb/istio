@@ -202,7 +202,7 @@ func FuzzInitContext(data []byte) int {
 	env.Watcher = mesh.NewFixedWatcher(m)
 	env.Init()
 	pc := model.NewPushContext()
-	_ = pc.InitContext(env, nil, nil)
+	_ = pc.InitContext(env, nil, nil, nil)
 	return 1
 }
 

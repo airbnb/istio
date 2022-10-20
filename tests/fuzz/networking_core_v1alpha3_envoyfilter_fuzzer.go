@@ -77,7 +77,7 @@ func InternalFuzzApplyClusterMerge(data []byte) int {
 	serviceDiscovery := memory.NewServiceDiscovery(nil)
 	env := newTestEnvironment(serviceDiscovery, testMesh, buildEnvoyFilterConfigStore(configPatches))
 	push := model.NewPushContext()
-	push.InitContext(env, nil, nil)
+	push.InitContext(env, nil, nil, nil)
 	efw := push.EnvoyFilters(proxy)
 	_ = ApplyClusterMerge(networking.EnvoyFilter_GATEWAY, efw, c, []host.Name{host.Name(fuzz_host)})
 	return 1

@@ -656,7 +656,7 @@ func TestApplyRouteConfigurationPatches(t *testing.T) {
 	serviceDiscovery := memory.NewServiceDiscovery(nil)
 	env := newTestEnvironment(serviceDiscovery, testMesh, buildEnvoyFilterConfigStore(configPatches))
 	push := model.NewPushContext()
-	push.InitContext(env, nil, nil)
+	push.InitContext(env, nil, nil, nil)
 
 	sidecarNode := &model.Proxy{Type: model.SidecarProxy, ConfigNamespace: "not-default"}
 	gatewayNode := &model.Proxy{Type: model.Router, ConfigNamespace: "not-default"}

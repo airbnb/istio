@@ -81,7 +81,7 @@ func TestInboundNetworkFilterStatPrefix(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			env := buildListenerEnv(services)
-			env.PushContext.InitContext(env, nil, nil)
+			env.PushContext.InitContext(env, nil, nil, nil)
 			env.PushContext.Mesh.InboundClusterStatName = tt.statPattern
 
 			instance := &model.ServiceInstance{
@@ -143,7 +143,7 @@ func TestInboundNetworkFilterIdleTimeout(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			env := buildListenerEnv(services)
-			env.PushContext.InitContext(env, nil, nil)
+			env.PushContext.InitContext(env, nil, nil, nil)
 
 			instance := &model.ServiceInstance{
 				Service: &model.Service{
@@ -270,7 +270,7 @@ func TestOutboundNetworkFilterStatPrefix(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			env := buildListenerEnv(services)
-			env.PushContext.InitContext(env, nil, nil)
+			env.PushContext.InitContext(env, nil, nil, nil)
 			env.PushContext.Mesh.OutboundClusterStatName = tt.statPattern
 
 			proxy := getProxy()
@@ -394,7 +394,7 @@ func TestOutboundNetworkFilterWithSourceIPHashing(t *testing.T) {
 	destinationRules := []*config.Config{&destinationRule, &simpleDestinationRule, &subsetdestinationRule, &subsetDifferentdestinationRule}
 
 	env := buildListenerEnvWithAdditionalConfig(services, nil, destinationRules)
-	env.PushContext.InitContext(env, nil, nil)
+	env.PushContext.InitContext(env, nil, nil, nil)
 
 	proxy := getProxy()
 	proxy.IstioVersion = model.ParseIstioVersion(proxy.Metadata.IstioVersion)

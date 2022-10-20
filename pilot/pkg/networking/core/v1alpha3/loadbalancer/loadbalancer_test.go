@@ -600,7 +600,7 @@ func buildEnvForClustersWithDistribute(distribute []*networking.LocalityLoadBala
 
 	env.PushContext = model.NewPushContext()
 	env.Init()
-	_ = env.PushContext.InitContext(env, nil, nil)
+	_ = env.PushContext.InitContext(env, nil, nil, nil)
 	env.PushContext.SetDestinationRules([]config.Config{
 		{
 			Meta: config.Meta{
@@ -659,7 +659,7 @@ func buildEnvForClustersWithFailover() *model.Environment {
 
 	env.PushContext = model.NewPushContext()
 	env.Init()
-	_ = env.PushContext.InitContext(env, nil, nil)
+	_ = env.PushContext.InitContext(env, nil, nil, nil)
 	env.PushContext.SetDestinationRules([]config.Config{
 		{
 			Meta: config.Meta{
@@ -713,7 +713,7 @@ func buildEnvForClustersWithFailoverPriority(failoverPriority []string) *model.E
 
 	env.PushContext = model.NewPushContext()
 	env.Init()
-	_ = env.PushContext.InitContext(env, nil, nil)
+	_ = env.PushContext.InitContext(env, nil, nil, nil)
 	env.PushContext.SetDestinationRules([]config.Config{
 		{
 			Meta: config.Meta{

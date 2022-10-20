@@ -104,7 +104,7 @@ func newTestEnvironment(serviceDiscovery model.ServiceDiscovery, meshConfig mesh
 
 	e.PushContext = model.NewPushContext()
 	e.Init()
-	_ = e.PushContext.InitContext(e, nil, nil)
+	_ = e.PushContext.InitContext(e, nil, nil, nil)
 
 	return e
 }
@@ -1699,7 +1699,7 @@ func TestApplyListenerPatches(t *testing.T) {
 	serviceDiscovery := memregistry.NewServiceDiscovery(nil)
 	e := newTestEnvironment(serviceDiscovery, testMesh, buildEnvoyFilterConfigStore(configPatches))
 	push := model.NewPushContext()
-	_ = push.InitContext(e, nil, nil)
+	_ = push.InitContext(e, nil, nil, nil)
 
 	type args struct {
 		patchContext networking.EnvoyFilter_PatchContext
@@ -1841,7 +1841,7 @@ func BenchmarkTelemetryV2Filters(b *testing.B) {
 	serviceDiscovery := memregistry.NewServiceDiscovery(nil)
 	e := newTestEnvironment(serviceDiscovery, testMesh, buildEnvoyFilterConfigStore(configPatches))
 	push := model.NewPushContext()
-	_ = push.InitContext(e, nil, nil)
+	_ = push.InitContext(e, nil, nil, nil)
 
 	var got interface{}
 	b.ResetTimer()

@@ -166,7 +166,7 @@ func InternalFuzzbuildSidecarInboundListeners(data []byte) int {
 		return 0
 	}
 	env := buildListenerEnv(allServices)
-	if err := env.PushContext.InitContext(env, nil, nil); err != nil {
+	if err := env.PushContext.InitContext(env, nil, nil, nil); err != nil {
 		return 0
 	}
 	proxy.SetServiceInstances(env)

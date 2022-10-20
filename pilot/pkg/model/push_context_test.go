@@ -696,7 +696,7 @@ func TestServiceIndex(t *testing.T) {
 
 	// Init a new push context
 	pc := NewPushContext()
-	if err := pc.InitContext(env, nil, nil); err != nil {
+	if err := pc.InitContext(env, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	si := pc.ServiceIndex
@@ -917,14 +917,14 @@ func TestInitPushContext(t *testing.T) {
 
 	// Init a new push context
 	old := NewPushContext()
-	if err := old.InitContext(env, nil, nil); err != nil {
+	if err := old.InitContext(env, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
 	// Create a new one, copying from the old one
 	// Pass a ConfigsUpdated otherwise we would just copy it directly
 	newPush := NewPushContext()
-	if err := newPush.InitContext(env, old, &PushRequest{
+	if err := newPush.InitContext(env, nil, old, &PushRequest{
 		ConfigsUpdated: map[ConfigKey]struct{}{
 			{Kind: gvk.Secret}: {},
 		},

@@ -453,7 +453,7 @@ func setupAndInitializeTest(t testing.TB, config ConfigInput) (*FakeDiscoverySer
 }
 
 func initPushContext(env *model.Environment, proxy *model.Proxy) {
-	env.PushContext.InitContext(env, nil, nil)
+	env.PushContext.InitContext(env, nil, nil, nil)
 	proxy.SetSidecarScope(env.PushContext)
 	proxy.SetGatewaysForProxy(env.PushContext)
 	proxy.SetServiceInstances(env.ServiceDiscovery)

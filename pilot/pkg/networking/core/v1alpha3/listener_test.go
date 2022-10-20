@@ -1714,7 +1714,7 @@ func TestHttpProxyListener(t *testing.T) {
 	configgen := NewConfigGenerator([]plugin.Plugin{p}, &model.DisabledCache{})
 
 	env := buildListenerEnv(nil)
-	if err := env.PushContext.InitContext(env, nil, nil); err != nil {
+	if err := env.PushContext.InitContext(env, nil, nil, nil); err != nil {
 		t.Fatalf("error in initializing push context: %s", err)
 	}
 
@@ -1740,7 +1740,7 @@ func TestHttpProxyListenerPerWorkload(t *testing.T) {
 	configgen := NewConfigGenerator([]plugin.Plugin{p}, &model.DisabledCache{})
 
 	env := buildListenerEnv(nil)
-	if err := env.PushContext.InitContext(env, nil, nil); err != nil {
+	if err := env.PushContext.InitContext(env, nil, nil, nil); err != nil {
 		t.Fatalf("error in initializing push context: %s", err)
 	}
 
@@ -2166,7 +2166,7 @@ func TestHttpProxyListener_Tracing(t *testing.T) {
 		features.EnableIstioTags = !tc.disableIstioTags
 
 		env := buildListenerEnv(nil)
-		if err := env.PushContext.InitContext(env, nil, nil); err != nil {
+		if err := env.PushContext.InitContext(env, nil, nil, nil); err != nil {
 			t.Fatalf("error in initializing push context: %s", err)
 		}
 
@@ -2440,7 +2440,7 @@ func getOldestService(services ...*model.Service) *model.Service {
 func buildAllListeners(p plugin.Plugin, env *model.Environment) []*listener.Listener {
 	configgen := NewConfigGenerator([]plugin.Plugin{p}, &model.DisabledCache{})
 
-	if err := env.PushContext.InitContext(env, nil, nil); err != nil {
+	if err := env.PushContext.InitContext(env, nil, nil, nil); err != nil {
 		return nil
 	}
 
@@ -2478,7 +2478,7 @@ func buildInboundListeners(t *testing.T, p plugin.Plugin, proxy *model.Proxy, si
 	t.Helper()
 	configgen := NewConfigGenerator([]plugin.Plugin{p}, &model.DisabledCache{})
 	env := buildListenerEnv(services)
-	if err := env.PushContext.InitContext(env, nil, nil); err != nil {
+	if err := env.PushContext.InitContext(env, nil, nil, nil); err != nil {
 		return nil
 	}
 	proxy.SetServiceInstances(env)
@@ -2694,7 +2694,7 @@ func buildListenerEnvWithAdditionalConfig(services []*model.Service, virtualServ
 func TestAppendListenerFallthroughRouteForCompleteListener(t *testing.T) {
 	env := buildListenerEnv(nil)
 	push := model.NewPushContext()
-	_ = push.InitContext(env, nil, nil)
+	_ = push.InitContext(env, nil, nil, nil)
 
 	tests := []struct {
 		name         string
@@ -2766,7 +2766,7 @@ func TestAppendListenerFallthroughRouteForCompleteListener(t *testing.T) {
 func TestMergeTCPFilterChains(t *testing.T) {
 	env := buildListenerEnv(nil)
 	push := model.NewPushContext()
-	_ = push.InitContext(env, nil, nil)
+	_ = push.InitContext(env, nil, nil, nil)
 
 	node := &model.Proxy{
 		ID:       "foo.bar",

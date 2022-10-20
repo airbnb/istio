@@ -1081,7 +1081,7 @@ func (ps *PushContext) IsClusterLocal(service *Service) bool {
 // InitContext will initialize the data structures used for code generation.
 // This should be called before starting the push, from the thread creating
 // the push context.
-func (ps *PushContext) InitContext(env *Environment, oldPushContext *PushContext, pushReq *PushRequest) error {
+func (ps *PushContext) InitContext(env *Environment, wp *PushContextWorkerPool, oldPushContext *PushContext, pushReq *PushRequest) error {
 	// Acquire a lock to ensure we don't concurrently initialize the same PushContext.
 	// If this does happen, one thread will block then exit early from InitDone=true
 	ps.initializeMutex.Lock()
@@ -1100,11 +1100,11 @@ func (ps *PushContext) InitContext(env *Environment, oldPushContext *PushContext
 
 	// create new or incremental update
 	if pushReq == nil || oldPushContext == nil || !oldPushContext.InitDone.Load() || len(pushReq.ConfigsUpdated) == 0 {
-		if err := ps.createNewContext(env); err != nil {
+		if err := ps.createNewContext(env, wp); err != nil {
 			return err
 		}
 	} else {
-		if err := ps.updateContext(env, oldPushContext, pushReq); err != nil {
+		if err := ps.updateContext(env, wp, oldPushContext, pushReq); err != nil {
 			return err
 		}
 	}
@@ -1117,7 +1117,7 @@ func (ps *PushContext) InitContext(env *Environment, oldPushContext *PushContext
 	return nil
 }
 
-func (ps *PushContext) createNewContext(env *Environment) error {
+func (ps *PushContext) createNewContext(env *Environment, wp *PushContextWorkerPool) error {
 	if err := ps.initServiceRegistry(env); err != nil {
 		return err
 	}
@@ -1164,7 +1164,7 @@ func (ps *PushContext) createNewContext(env *Environment) error {
 	}
 
 	// Must be initialized in the end
-	if err := ps.initSidecarScopes(env); err != nil {
+	if err := ps.initSidecarScopes(env, wp); err != nil {
 		return err
 	}
 	return nil
@@ -1172,6 +1172,7 @@ func (ps *PushContext) createNewContext(env *Environment) error {
 
 func (ps *PushContext) updateContext(
 	env *Environment,
+	wp *PushContextWorkerPool,
 	oldPushContext *PushContext,
 	pushReq *PushRequest) error {
 	var servicesChanged, virtualServicesChanged, destinationRulesChanged, gatewayChanged,
@@ -1352,7 +1353,7 @@ func (ps *PushContext) updateContext(
 	// Sidecars need to be updated if services, virtual services, destination rules, or the sidecar configs change
 	if servicesChanged || virtualServicesChanged || destinationRulesChanged || sidecarsChanged {
 		log.Infof("[Ying] sidecar scope changed")
-		if err := ps.initSidecarScopes(env); err != nil {
+		if err := ps.initSidecarScopes(env, wp); err != nil {
 			return err
 		}
 	} else {
@@ -1618,7 +1619,7 @@ func (ps *PushContext) initDefaultExportMaps() {
 // When proxies connect to Pilot, we identify the sidecar scope associated
 // with the proxy and derive listeners/routes/clusters based on the sidecar
 // scope.
-func (ps *PushContext) initSidecarScopes(env *Environment) error {
+func (ps *PushContext) initSidecarScopes(env *Environment, wp *PushContextWorkerPool) error {
 	t := time.Now()
 	sidecarConfigs, err := env.List(gvk.Sidecar, NamespaceAll)
 	if err != nil {
@@ -1664,40 +1665,34 @@ func (ps *PushContext) initSidecarScopes(env *Environment) error {
 	}
 	ps.sidecarIndex.rootConfig = rootNSConfig
 
-	numWorkers := 100
-	configsPerWorker := len(sidecarConfigs) / 100
-	if configsPerWorker == 0 {
-		configsPerWorker = 1
-	}
+	if wp != nil {
+		ch := make(chan *SidecarScope)
 
-	ch := make(chan *SidecarScope)
-
-	var wg sync.WaitGroup
-	wg.Add(numWorkers)
-	for i := 0; i < numWorkers; i++ {
-		go func(i int) {
-			defer wg.Done()
-			// [start,end)
-			start := i * configsPerWorker
-			end := (i + 1) * configsPerWorker
-			if len(sidecarConfigs) < end {
-				end = len(sidecarConfigs)
-			}
-
-			for j := start; j < end; j++ {
-				c := sidecarConfigs[j]
+		n := len(sidecarConfigs)
+		var wg sync.WaitGroup
+		wg.Add(n)
+		for i := 0; i < n; i++ {
+			work := func() {
+				defer wg.Done()
+				c := sidecarConfigs[i]
 				ch <- ConvertToSidecarScope(ps, &c, c.Namespace)
 			}
-		}(i)
-	}
+			wp.PushWork(work)
+		}
 
-	go func() {
-		wg.Wait()
-		close(ch)
-	}()
+		go func() {
+			wg.Wait()
+			close(ch)
+		}()
 
-	for sidecarScope := range ch {
-		ps.sidecarIndex.sidecarsByNamespace[sidecarScope.Namespace] = append(ps.sidecarIndex.sidecarsByNamespace[sidecarScope.Namespace], sidecarScope)
+		for sidecarScope := range ch {
+			ps.sidecarIndex.sidecarsByNamespace[sidecarScope.Namespace] = append(ps.sidecarIndex.sidecarsByNamespace[sidecarScope.Namespace], sidecarScope)
+		}
+	} else {
+		for _, sidecarConfig := range sidecarConfigs {
+			ps.sidecarIndex.sidecarsByNamespace[sidecarConfig.Namespace] = append(ps.sidecarIndex.sidecarsByNamespace[sidecarConfig.Namespace],
+				ConvertToSidecarScope(ps, &sidecarConfig, sidecarConfig.Namespace))
+		}
 	}
 
 	log.Infof("[Ying] populate sidecarIndex took %v seconds", time.Since(t))
@@ -2292,4 +2287,46 @@ func (ps *PushContext) ReferenceAllowed(kind config.GroupVersionKind, resourceNa
 	default:
 	}
 	return false
+}
+
+type PushContextWorkerPool struct {
+	workerCount int
+
+	workQueue chan func()
+}
+
+func NewPushContextWorkerPool(workerCount int) *PushContextWorkerPool {
+	// There must be at least one worker.
+	if workerCount < 1 {
+		workerCount = 1
+	}
+
+	pool := &PushContextWorkerPool{
+		workerCount: workerCount,
+		workQueue:   make(chan func(), workerCount),
+	}
+	return pool
+}
+
+func (p *PushContextWorkerPool) GetWorkerCount() int {
+	return p.workerCount
+}
+
+func (p *PushContextWorkerPool) PushWork(w func()) {
+	p.workQueue <- w
+}
+
+func (p *PushContextWorkerPool) Run(stop <-chan struct{}) {
+	for i := 0; i < p.workerCount; i++ {
+		go func() {
+			for {
+				select {
+				case f := <-p.workQueue:
+					f()
+				case <-stop:
+					return
+				}
+			}
+		}()
+	}
 }

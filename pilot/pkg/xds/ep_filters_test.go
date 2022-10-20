@@ -618,7 +618,7 @@ func runNetworkFilterTest(t *testing.T, env *model.Environment, tests []networkF
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			push := model.NewPushContext()
-			_ = push.InitContext(env, nil, nil)
+			_ = push.InitContext(env, nil, nil, nil)
 			b := NewEndpointBuilder("outbound|80||example.ns.svc.cluster.local", tt.conn.proxy, push)
 			testEndpoints := b.buildLocalityLbEndpointsFromShards(testShards(), &model.Port{Name: "http", Port: 80, Protocol: protocol.HTTP})
 			filtered := b.EndpointsByNetworkFilter(testEndpoints)
