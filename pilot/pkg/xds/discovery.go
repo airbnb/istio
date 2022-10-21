@@ -402,7 +402,6 @@ func (s *DiscoveryServer) ConfigUpdate(req *model.PushRequest) {
 // It also ensures that at most maxDelay is elapsed between receiving an event and processing it.
 func (s *DiscoveryServer) handleUpdates(stopCh <-chan struct{}) {
 	s.pushContextWorkerPool.Run(stopCh)
-	log.Info("[Ying] push context worker pool started")
 	debounce(s.pushChannel, stopCh, s.debounceOptions, s.Push, s.CommittedUpdates)
 }
 
