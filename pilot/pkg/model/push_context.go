@@ -1678,9 +1678,10 @@ func (ps *PushContext) initSidecarScopes(env *Environment, wp *PushContextWorker
 
 		go func() {
 			for i := 0; i < n; i++ {
+				j := i
 				work := func() {
 					defer wg.Done()
-					c := sidecarConfigs[i]
+					c := sidecarConfigs[j]
 					ch <- ConvertToSidecarScope(ps, &c, c.Namespace)
 				}
 				wp.PushWork(work)
