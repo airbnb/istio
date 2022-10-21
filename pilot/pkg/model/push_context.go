@@ -1675,16 +1675,17 @@ func (ps *PushContext) initSidecarScopes(env *Environment, wp *PushContextWorker
 		n := len(sidecarConfigs)
 		var wg sync.WaitGroup
 		wg.Add(n)
-		for i := 0; i < n; i++ {
-			work := func() {
-				defer wg.Done()
-				c := sidecarConfigs[i]
-				ch <- ConvertToSidecarScope(ps, &c, c.Namespace)
-			}
-			wp.PushWork(work)
-		}
 
 		go func() {
+			for i := 0; i < n; i++ {
+				work := func() {
+					defer wg.Done()
+					c := sidecarConfigs[i]
+					ch <- ConvertToSidecarScope(ps, &c, c.Namespace)
+				}
+				wp.PushWork(work)
+			}
+
 			wg.Wait()
 			close(ch)
 		}()
