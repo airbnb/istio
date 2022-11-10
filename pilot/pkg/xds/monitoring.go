@@ -121,7 +121,7 @@ var (
 	debounceTime = monitoring.NewDistribution(
 		"pilot_debounce_time",
 		"Delay in seconds between the first config enters debouncing and the merged push request is pushed into the push queue.",
-		[]float64{.01, .1, 1, 3, 5, 10, 20, 30},
+		[]float64{.01, .1, 1, 3, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60},
 	)
 
 	pushContextInitTime = monitoring.NewDistribution(
