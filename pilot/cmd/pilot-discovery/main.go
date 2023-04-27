@@ -16,12 +16,14 @@ package main
 
 import (
 	"os"
+	"runtime"
 
 	"istio.io/istio/pilot/cmd/pilot-discovery/app"
 	"istio.io/pkg/log"
 )
 
 func main() {
+	runtime.SetMutexProfileFraction(100)
 	log.EnableKlogWithCobra()
 	rootCmd := app.NewRootCommand()
 	if err := rootCmd.Execute(); err != nil {
