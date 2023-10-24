@@ -83,7 +83,7 @@ function set_download_command () {
   # Try curl.
   if command -v curl > /dev/null; then
     if curl --version | grep Protocols  | grep https > /dev/null; then
-      DOWNLOAD_COMMAND="curl -fLSs --retry 5 --retry-delay 1 --retry-connrefused"
+      DOWNLOAD_COMMAND="curl -fLSs --retry 5 --retry-delay 1"
       return
     fi
     echo curl does not support https, will try wget for downloading files.
