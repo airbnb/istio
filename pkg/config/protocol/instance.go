@@ -90,7 +90,22 @@ func Parse(s string) Instance {
 		return MySQL
 	}
 
-	return Unsupported
+	// This hack is due to the fact that we do not rely on protocol detection.
+	//
+	// Unknown protocol ports get programmed by Istiod with both TLS and HTTP
+	// inspectors and a full HTTP chain. Which is by design but is a problem
+	// for us as there are a lot of applications that expose non-mesh TCP ports
+	// which get pushed as listeners to sidecars but are never used as the
+	// clusterIPs associated are the workload cluster's serviceIPs.
+	// This can result in a substantial amount of memory increase for services
+	// with many outbound dependencies.
+	//
+	// By treating unnamed ports as TCP instead of Unsupported it prevents
+	// istiod from building an HTTP filter chain reverting us to the 1.17
+	// behavior of treating these ports as TCP and essentially disables
+	// protocol sniffing on these ports and stops Istiod from adding a full
+	// HTTP filter chain
+	return TCP
 }
 
 // IsHTTP2 is true for protocols that use HTTP/2 as transport protocol
