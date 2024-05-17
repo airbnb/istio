@@ -58,9 +58,9 @@ func TestParse(t *testing.T) {
 		{"mysql", protocol.MySQL},
 		{"MYSQL", protocol.MySQL},
 		{"MySQL", protocol.MySQL},
-		{"", protocol.Unsupported},
-		{"SMTP", protocol.Unsupported},
-		{"HBONE", protocol.Unsupported},
+		{"", protocol.TCP},
+		{"SMTP", protocol.TCP},
+		{"HBONE", protocol.TCP},
 	}
 
 	for _, testPair := range testPairs {
