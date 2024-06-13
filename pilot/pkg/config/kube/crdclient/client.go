@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"  // import GKE cluster authentication plugin
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc" // import OIDC cluster authentication plugin, e.g. for Tectonic
+	"k8s.io/client-go/tools/cache"
 
 	"istio.io/istio/pilot/pkg/features"
 	"istio.io/istio/pilot/pkg/model"
@@ -352,6 +353,18 @@ func (cl *Client) addCRD(name string) {
 		}
 		if cl.namespacesFilter != nil && !cl.namespacesFilter(t) {
 			return false
+		}
+		// When an object is deleted, t could be a DeletionFinalStateUnknown marker item.
+		object, ok := t.(controllers.Object)
+		if !ok {
+			tombstone, ok := t.(cache.DeletedFinalStateUnknown)
+			if !ok {
+				return false
+			}
+			object, ok = tombstone.Obj.(controllers.Object)
+			if !ok {
+				return false
+			}
 		}
 		return config.LabelsInRevision(t.(controllers.Object).GetLabels(), cl.revision)
 	}
