@@ -650,6 +650,8 @@ func workloadEntryFromGroup(name string, proxy *model.Proxy, groupCfg *config.Co
 		// the label has been converted to "istio-locality: region/zone/subzone"
 		// in pilot/pkg/xds/ads.go, and `/` is not allowed in k8s label value.
 		// Instead of converting again, we delete it since has set WorkloadEntry.Locality
+		l := entry.Labels[model.LocalityLabel]
+		log.Infof("Deleting key: %s with value: %s from WLE: %s", model.LocalityLabel, l, name)
 		delete(entry.Labels, model.LocalityLabel)
 	}
 
@@ -661,8 +663,15 @@ func workloadEntryFromGroup(name string, proxy *model.Proxy, groupCfg *config.Co
 	if proxy.Metadata.Network != "" {
 		entry.Network = string(proxy.Metadata.Network)
 	}
+	// proxy.Locality is unset when auto registration takes place, because its
+	// state is not fully initialized. Therefore, we check the bootstrap node.
+	if proxy.XdsNode.Locality != nil {
+		entry.Locality = util.LocalityToString(proxy.XdsNode.Locality)
+		log.Infof("Setting Locality: %s for WLE: %s via XDS", entry.Locality, name)
+	}
 	if proxy.Locality != nil {
 		entry.Locality = util.LocalityToString(proxy.Locality)
+		log.Infof("Setting Locality: %s for WLE: %s via proxy.Locality", entry.Locality, name)
 	}
 	if proxy.Metadata.ProxyConfig != nil && proxy.Metadata.ProxyConfig.ReadinessProbe != nil {
 		annotations[status.WorkloadEntryHealthCheckAnnotation] = "true"
