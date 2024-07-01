@@ -595,6 +595,7 @@ func (s *DiscoveryServer) initProxyMetadata(node *core.Node) (*model.Proxy, erro
 	// Update the config namespace associated with this proxy
 	proxy.ConfigNamespace = model.GetProxyConfigNamespace(proxy)
 	proxy.XdsNode = node
+	log.Infof("Setting proxy.XdsNode for WLE: %s/%s", meta.Namespace, proxy.WorkloadEntryName)
 	return proxy, nil
 }
 
@@ -607,9 +608,11 @@ func setTopologyLabels(proxy *model.Proxy) {
 	// So its enough to look at the first instance.
 	if len(proxy.ServiceInstances) > 0 {
 		localityStr = proxy.ServiceInstances[0].Endpoint.Locality.Label
+		log.Infof("Setting locality: %s for WLE: %s/%s via proxy.ServiceInstances", localityStr, proxy.Metadata.Namespace, proxy.WorkloadEntryName)
 	} else {
 		// If no service instances(this maybe common for a pure client), respect LocalityLabel
 		localityStr = proxy.Labels[model.LocalityLabel]
+		log.Infof("Setting locality: %s for WLE: %s/%s via Proxy.Labels", localityStr, proxy.Metadata.Namespace, proxy.WorkloadEntryName)
 	}
 	if localityStr != "" {
 		proxy.Locality = util.ConvertLocality(localityStr)
@@ -622,6 +625,7 @@ func setTopologyLabels(proxy *model.Proxy) {
 			Zone:    proxy.XdsNode.Locality.GetZone(),
 			SubZone: proxy.XdsNode.Locality.GetSubZone(),
 		}
+		log.Infof("Setting locality: %s for WLE: %s/%s via XdsNode", proxy.Locality.Zone, proxy.Metadata.Namespace, proxy.WorkloadEntryName)
 	}
 
 	locality := util.LocalityToString(proxy.Locality)
