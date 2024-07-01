@@ -227,6 +227,7 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 	// but proxy's SidecarScope has been updated(s.computeProxyState -> SetSidecarScope) due to optimizations that skip sidecar scope
 	// computation.
 	if con.proxy.SidecarScope != nil && con.proxy.SidecarScope.Version != request.Push.PushVersion {
+		log.Infof("calling computeProxyState from processRequest for %s", con.proxy.ID)
 		s.computeProxyState(con.proxy, request)
 	}
 	return s.pushXds(con, con.Watched(req.TypeUrl), request)
@@ -642,6 +643,7 @@ func (s *DiscoveryServer) initializeProxy(con *Connection) error {
 	if err := s.WorkloadEntryController.RegisterWorkload(proxy, con.connectedAt); err != nil {
 		return err
 	}
+	// TODO(Doug): Don't need to log here since this is the paved road.
 	s.computeProxyState(proxy, nil)
 	// Discover supported IP Versions of proxy so that appropriate config can be delivered.
 	proxy.DiscoverIPMode()
@@ -738,6 +740,7 @@ func (s *DiscoveryServer) pushConnection(con *Connection, pushEv *Event) error {
 
 	if pushRequest.Full {
 		// Update Proxy with current information.
+		log.Infof("calling computeProxyState from pushConnection for %s", con.proxy.ID)
 		s.computeProxyState(con.proxy, pushRequest)
 	}
 
