@@ -168,13 +168,13 @@ func TestAutoregistrationLifecycle(t *testing.T) {
 	n := fakeNode("reg1", "zone1", "subzone1")
 
 	p := fakeProxy("1.2.3.4", wgA, "nw1", "sa-a")
-	p.Locality = n.Locality
+	p.XdsNode = n
 
 	p2 := fakeProxy("1.2.3.4", wgA, "nw2", "sa-a")
-	p2.Locality = n.Locality
+	p2.XdsNode = n
 
 	p3 := fakeProxy("1.2.3.5", wgA, "nw1", "sa-a")
-	p3.Locality = n.Locality
+	p3.XdsNode = n
 
 	// allows associating a Register call with Unregister
 	var origConnTime time.Time
@@ -336,7 +336,6 @@ func TestWorkloadEntryFromGroup(t *testing.T) {
 	proxy := fakeProxy("10.0.0.1", group, "nw1", "sa")
 	proxy.Labels[model.LocalityLabel] = "rgn2/zone2/subzone2"
 	proxy.XdsNode = fakeNode("rgn2", "zone2", "subzone2")
-	proxy.Locality = proxy.XdsNode.Locality
 
 	wantLabels := map[string]string{
 		"app":   "a",   // from WorkloadEntry template
