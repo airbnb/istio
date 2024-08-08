@@ -46,7 +46,7 @@ func TestConvertProtocol(t *testing.T) {
 		out         protocol.Instance
 	}
 	protocols := []protocolCase{
-		{8888, "", nil, corev1.ProtocolTCP, protocol.Unsupported},
+		{8888, "", nil, corev1.ProtocolTCP, protocol.TCP},
 		{25, "", nil, corev1.ProtocolTCP, protocol.TCP},
 		{53, "", nil, corev1.ProtocolTCP, protocol.TCP},
 		{3306, "", nil, corev1.ProtocolTCP, protocol.TCP},
@@ -54,7 +54,7 @@ func TestConvertProtocol(t *testing.T) {
 		{8888, "http", nil, corev1.ProtocolTCP, protocol.HTTP},
 		{8888, "http-test", nil, corev1.ProtocolTCP, protocol.HTTP},
 		{8888, "http", nil, corev1.ProtocolUDP, protocol.UDP},
-		{8888, "httptest", nil, corev1.ProtocolTCP, protocol.Unsupported},
+		{8888, "httptest", nil, corev1.ProtocolTCP, protocol.TCP},
 		{25, "httptest", nil, corev1.ProtocolTCP, protocol.TCP},
 		{53, "httptest", nil, corev1.ProtocolTCP, protocol.TCP},
 		{3306, "httptest", nil, corev1.ProtocolTCP, protocol.TCP},
