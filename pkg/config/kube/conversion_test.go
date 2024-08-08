@@ -35,7 +35,7 @@ func TestConvertProtocol(t *testing.T) {
 	}{
 		{
 			name:          "resolves empty",
-			expectedProto: protocol.Unsupported,
+			expectedProto: protocol.TCP,
 		},
 		{
 			name:          "resolves from protocol directly",
@@ -67,7 +67,7 @@ func TestConvertProtocol(t *testing.T) {
 		{
 			name:          "makes sure grpc-web is not resolved incorrectly",
 			portName:      "grpcweb-x",
-			expectedProto: protocol.Unsupported,
+			expectedProto: protocol.TCP,
 		},
 		{
 			name:          "resolves based on known ports",

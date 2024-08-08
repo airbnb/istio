@@ -1338,8 +1338,8 @@ spec:
 				Name: "Auto virtual service applies to alias fqdn",
 				Call: simulation.Call{Address: "1.2.3.4", Port: 81, Protocol: simulation.HTTP, HostHeader: "alias.default.svc.cluster.local", Path: "/one"},
 				Result: simulation.Result{
-					RouteMatched:   "default",
-					ClusterMatched: "outbound|81||concrete.default.svc.cluster.local",
+					ListenerMatched: "1.2.3.4_81",
+					ClusterMatched:  "outbound|81||concrete.default.svc.cluster.local",
 				},
 			},
 			{
@@ -1347,16 +1347,16 @@ spec:
 				Name: "Auto virtual service does not apply to alias without exact match",
 				Call: simulation.Call{Address: "1.2.3.4", Port: 81, Protocol: simulation.HTTP, HostHeader: "alias.default", Path: "/one"},
 				Result: simulation.Result{
-					RouteMatched:   "default",
-					ClusterMatched: "outbound|81||concrete.default.svc.cluster.local",
+					ListenerMatched: "1.2.3.4_81",
+					ClusterMatched:  "outbound|81||concrete.default.svc.cluster.local",
 				},
 			},
 			{
 				Name: "Auto virtual service of alias does not apply to concrete",
 				Call: simulation.Call{Address: "1.2.3.4", Port: 81, Protocol: simulation.HTTP, HostHeader: "concrete.default.svc.cluster.local", Path: "/one"},
 				Result: simulation.Result{
-					RouteMatched:   "default",
-					ClusterMatched: "outbound|81||concrete.default.svc.cluster.local",
+					ListenerMatched: "1.2.3.4_81",
+					ClusterMatched:  "outbound|81||concrete.default.svc.cluster.local",
 				},
 			},
 		},

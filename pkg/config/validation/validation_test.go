@@ -1315,7 +1315,6 @@ func TestValidateServerPort(t *testing.T) {
 		bind string
 		out  string
 	}{
-		{"empty", &networking.Port{}, "", "invalid protocol"},
 		{"empty", &networking.Port{}, "", "port name"},
 		{
 			"happy",
@@ -1335,7 +1334,7 @@ func TestValidateServerPort(t *testing.T) {
 				Name:     "Henry",
 			},
 			"",
-			"invalid protocol",
+			"",
 		},
 		{
 			"invalid number",

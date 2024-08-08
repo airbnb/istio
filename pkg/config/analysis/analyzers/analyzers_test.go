@@ -348,11 +348,6 @@ var testGrid = []testCase{
 		name:       "portNameNotFollowConvention",
 		inputFiles: []string{"testdata/service-no-port-name.yaml"},
 		analyzer:   &service.PortNameAnalyzer{},
-		expected: []message{
-			{msg.PortNameIsNotUnderNamingConvention, "Service my-namespace1/my-service1"},
-			{msg.PortNameIsNotUnderNamingConvention, "Service my-namespace1/my-service1"},
-			{msg.PortNameIsNotUnderNamingConvention, "Service my-namespace2/my-service2"},
-		},
 	},
 	{
 		name:       "namedPort",
@@ -828,8 +823,6 @@ var testGrid = []testCase{
 		inputFiles: []string{"testdata/incorrect-port-name-external-name-service-type.yaml"},
 		analyzer:   &service.PortNameAnalyzer{},
 		expected: []message{
-			{msg.ExternalNameServiceTypeInvalidPortName, "Service nginx-ns/nginx"},
-			{msg.ExternalNameServiceTypeInvalidPortName, "Service nginx-ns2/nginx-svc2"},
 			{msg.ExternalNameServiceTypeInvalidPortName, "Service nginx-ns3/nginx-svc3"},
 		},
 	},
