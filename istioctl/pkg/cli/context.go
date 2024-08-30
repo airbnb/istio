@@ -104,7 +104,13 @@ func (i *instance) CLIClientWithRevision(rev string) (kube.CLIClient, error) {
 		i.clients = make(map[string]kube.CLIClient)
 	}
 	if i.clients[rev] == nil {
-		client, err := newKubeClientWithRevision(*i.kubeconfig, *i.configContext, rev, i.getImpersonateConfig())
+		impersonateConfig := i.getImpersonateConfig()
+		if len(*i.impersonate) > 0 {
+			impersonateConfig.UserName = *i.impersonate
+			impersonateConfig.UID = *i.impersonateUID
+			impersonateConfig.Groups = *i.impersonateGroup
+		}
+		client, err := newKubeClientWithRevision(*i.kubeconfig, *i.configContext, rev, impersonateConfig)
 		if err != nil {
 			return nil, err
 		}
