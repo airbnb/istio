@@ -197,7 +197,9 @@ func (configgen *ConfigGeneratorImpl) buildSidecarOutboundHTTPRouteConfig(
 		VirtualHosts:                   virtualHosts,
 		ValidateClusters:               proto.BoolFalse,
 		MaxDirectResponseBodySizeBytes: istio_route.DefaultMaxDirectResponseBodySizeBytes,
-		IgnorePortInHostMatching:       true,
+	}
+	if features.SidecarIgnorePort {
+		out.IgnorePortInHostMatching = true
 	}
 
 	// apply envoy filter patches
@@ -614,7 +616,7 @@ func getVirtualHostsForSniffedServicePort(vhosts []*route.VirtualHost, routeName
 }
 
 func SidecarIgnorePort(node *model.Proxy) bool {
-	return !node.IsProxylessGrpc()
+	return !node.IsProxylessGrpc() && features.SidecarIgnorePort
 }
 
 // generateVirtualHostDomains generates the set of domain matches for a service being accessed from
