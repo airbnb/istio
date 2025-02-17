@@ -521,6 +521,7 @@ func (s *Controller) WorkloadInstanceHandler(wi *model.WorkloadInstance, event m
 	}
 
 	if redundantEventForPod {
+		log.Debugf("Redundant event found for pod %s/%s/%s, returning early.", wi.Kind, wi.Endpoint.Address, wi.Namespace)
 		s.mutex.Unlock()
 		return
 	}
@@ -528,6 +529,7 @@ func (s *Controller) WorkloadInstanceHandler(wi *model.WorkloadInstance, event m
 	// We will only select entries in the same namespace
 	cfgs := s.store.List(gvk.ServiceEntry, wi.Namespace)
 	if len(cfgs) == 0 {
+		log.Debugf("No service entries found for workload instance (%s/%s) in namespace %s", wi.Kind, wi.Endpoint.Address, wi.Namespace)
 		s.mutex.Unlock()
 		return
 	}
@@ -540,6 +542,7 @@ func (s *Controller) WorkloadInstanceHandler(wi *model.WorkloadInstance, event m
 		se := cfg.Spec.(*networking.ServiceEntry)
 		if se.WorkloadSelector == nil || (!labelsChanged && !labels.Instance(se.WorkloadSelector.Labels).Match(wi.Endpoint.Labels)) {
 			// If the labels didn't change. And the new SE doesn't match then the old didn't match either and we can skip processing it.
+			log.Debugf("Labels didn't change for workload instance (%s/%s) in namespace %s and service entry %s/%s", wi.Kind, wi.Endpoint.Address, wi.Namespace, cfg.Namespace, cfg.Name)
 			continue
 		}
 

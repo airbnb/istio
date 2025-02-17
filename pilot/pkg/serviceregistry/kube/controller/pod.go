@@ -147,10 +147,12 @@ func (pc *PodCache) labelFilter(old, cur *v1.Pod) bool {
 
 // onEvent updates the IP-based index (pc.podsByIP).
 func (pc *PodCache) onEvent(_, pod *v1.Pod, ev model.Event) error {
+	log.Debugf("Pod event %s %s", ev.String(), config.NamespacedName(pod).String())
 	ip := pod.Status.PodIP
 	// PodIP will be empty when pod is just created, but before the IP is assigned
 	// via UpdateStatus.
 	if len(ip) == 0 {
+		log.Debugf("Pod %s has no IP", config.NamespacedName(pod).String())
 		return nil
 	}
 
@@ -158,29 +160,37 @@ func (pc *PodCache) onEvent(_, pod *v1.Pod, ev model.Event) error {
 	switch ev {
 	case model.EventAdd:
 		if shouldPodBeInEndpoints(pod) && IsPodReady(pod) {
+			log.Debugf("Add: Pod %s is ready", config.NamespacedName(pod).String())
 			pc.update(ip, key)
 		} else {
+			log.Debugf("Add: Pod %s is not ready", config.NamespacedName(pod).String())
 			return nil
 		}
 	case model.EventUpdate:
 		if !shouldPodBeInEndpoints(pod) || !IsPodReady(pod) {
+			log.Debugf("Update: Pod %s is not ready", config.NamespacedName(pod).String())
 			// delete only if this pod was in the cache
 			if !pc.deleteIP(ip, key) {
+				log.Debugf("Update: Pod %s not deleted", config.NamespacedName(pod).String())
 				return nil
 			}
 			ev = model.EventDelete
 		} else if shouldPodBeInEndpoints(pod) && IsPodReady(pod) {
+			log.Debugf("Update: Pod %s is ready", config.NamespacedName(pod).String())
 			pc.update(ip, key)
 		} else {
+			log.Debugf("Update: Pod %s is not ready", config.NamespacedName(pod).String())
 			return nil
 		}
 	case model.EventDelete:
 		// delete only if this pod was in the cache,
 		// in most case it has already been deleted in `UPDATE` with `DeletionTimestamp` set.
 		if !pc.deleteIP(ip, key) {
+			log.Debugf("Delete: Pod %s not deleted", config.NamespacedName(pod).String())
 			return nil
 		}
 	}
+	log.Debugf("Notify workload handlers for pod %s with event %s", config.NamespacedName(pod).String(), ev.String())
 	pc.notifyWorkloadHandlers(pod, ev)
 	return nil
 }
