@@ -567,6 +567,7 @@ func (s *Controller) WorkloadInstanceHandler(wi *model.WorkloadInstance, event m
 				}
 				s.serviceInstances.deleteServiceEntryInstances(seNamespacedName, key)
 			} else if event == model.EventDelete {
+				log.Debugf("Delete service entry instances for ns name: %s, key: %s/%s/%s", seNamespacedName, key.kind, key.namespace, key.name)
 				s.serviceInstances.deleteServiceEntryInstances(seNamespacedName, key)
 			} else {
 				s.serviceInstances.updateServiceEntryInstancesPerConfig(seNamespacedName, key, currInstance)
@@ -600,6 +601,7 @@ func (s *Controller) WorkloadInstanceHandler(wi *model.WorkloadInstance, event m
 	}
 
 	if event == model.EventDelete {
+		log.Debugf("deleteInstanceKeys called: key: %s, instances: %v", key, instances)
 		s.serviceInstances.deleteInstanceKeys(key, instances)
 	} else {
 		s.serviceInstances.updateInstances(key, instances)
@@ -762,14 +764,17 @@ func (s *Controller) doEdsCacheUpdate(keys sets.Set[instancesKey]) {
 
 // doEdsUpdate invokes XdsUpdater's eds update to trigger eds push.
 func (s *Controller) doEdsUpdate(keys sets.Set[instancesKey]) {
+	log.Debugf("doEdsUpdate for keys %v", keys)
 	endpoints := s.buildEndpoints(keys)
 	shard := model.ShardKeyFromRegistry(s)
 	// This is delete.
 	if len(endpoints) == 0 {
+		log.Debugf("doEdsUpdate for shard %s with no endpoints", shard.String())
 		for k := range keys {
 			s.XdsUpdater.EDSUpdate(shard, string(k.hostname), k.namespace, nil)
 		}
 	} else {
+		log.Debugf("doEdsUpdate for shard %s with %d endpoints", shard.String(), len(endpoints))
 		for k, eps := range endpoints {
 			s.XdsUpdater.EDSUpdate(shard, string(k.hostname), k.namespace, eps)
 		}

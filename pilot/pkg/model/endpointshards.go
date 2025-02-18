@@ -275,6 +275,7 @@ func (e *EndpointIndex) UpdateServiceEndpoints(
 	namespace string,
 	istioEndpoints []*IstioEndpoint,
 ) PushType {
+	log.Debugf("UpdateServiceEndpoints called with shard %s, service %s/%s, %d endpoints", shard.String(), hostname, namespace, len(istioEndpoints))
 	if len(istioEndpoints) == 0 {
 		// Should delete the service EndpointShards when endpoints become zero to prevent memory leak,
 		// but we should not delete the keys from EndpointIndex map - that will trigger
