@@ -151,16 +151,27 @@ func (pc *PodCache) onEvent(_, pod *v1.Pod, ev model.Event) error {
 	ip := pod.Status.PodIP
 	// PodIP will be empty when pod is just created, but before the IP is assigned
 	// via UpdateStatus.
-	if len(ip) == 0 {
-		log.Debugf("Pod %s has no IP", config.NamespacedName(pod).String())
-		return nil
+	// In the case of a pod being created, we should not add it to the cache until it is ready.
+	// However, if the pod *used to* have an IP, we do need to actually delete it.
+	if len(ip) == 0 { // add failed pod check
+		// TODO: take a lock...
+		if i, ok := pc.IPByPods[config.NamespacedName(pod)]; ok {
+			log.Debugf("Pod %s has no IP but was in the cache, continue so we can delete it", config.NamespacedName(pod).String())
+			//pc.deleteIP(i, config.NamespacedName(pod))
+			// Temporarily set the IP to the old value so we can delete it
+			pod.Status.PodIP = i
+			ip = i
+		} else {
+			log.Debugf("Pod %s has no IP", config.NamespacedName(pod).String())
+			return nil
+		}
 	}
 
 	key := config.NamespacedName(pod)
 	switch ev {
 	case model.EventAdd:
 		if shouldPodBeInEndpoints(pod) && IsPodReady(pod) {
-			log.Debugf("Add: Pod %s is ready", config.NamespacedName(pod).String())
+			log.Debugf("Add: Pod %sf is ready", config.NamespacedName(pod).String())
 			pc.update(ip, key)
 		} else {
 			log.Debugf("Add: Pod %s is not ready", config.NamespacedName(pod).String())
@@ -179,7 +190,7 @@ func (pc *PodCache) onEvent(_, pod *v1.Pod, ev model.Event) error {
 			log.Debugf("Update: Pod %s is ready", config.NamespacedName(pod).String())
 			pc.update(ip, key)
 		} else {
-			log.Debugf("Update: Pod %s is not ready", config.NamespacedName(pod).String())
+			log.Debugf("Update: Pod %s tbd", config.NamespacedName(pod).String())
 			return nil
 		}
 	case model.EventDelete:
