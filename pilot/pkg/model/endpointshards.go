@@ -286,6 +286,12 @@ func (e *EndpointIndex) UpdateServiceEndpoints(
 		return IncrementalPush
 	}
 
+	eps := make([]string, 0, len(istioEndpoints))
+	for _, ie := range istioEndpoints {
+		eps = append(eps, fmt.Sprintf("%s:%d", ie.Address, ie.EndpointPort))
+	}
+	log.Debugf("Endpoints for service %s/%s: %v", namespace, hostname, eps)
+
 	pushType := IncrementalPush
 	// Find endpoint shard for this service, if it is available - otherwise create a new one.
 	ep, created := e.GetOrCreateEndpointShard(hostname, namespace)
@@ -417,6 +423,7 @@ func NewEndpointIndexUpdater(ei *EndpointIndex) *EndpointIndexUpdater {
 func (f *EndpointIndexUpdater) ConfigUpdate(*PushRequest) {}
 
 func (f *EndpointIndexUpdater) EDSUpdate(shard ShardKey, serviceName string, namespace string, eps []*IstioEndpoint) {
+	log.Debugf("EndpointIndexUpdater . EDSUpdate called with shard %s, service %s/%s, %d endpoints", shard.String(), serviceName, namespace, len(eps))
 	pushType := f.Index.UpdateServiceEndpoints(shard, serviceName, namespace, eps)
 	if f.ConfigUpdateFunc != nil && (pushType == IncrementalPush || pushType == FullPush) {
 		// Trigger a push
