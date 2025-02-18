@@ -151,7 +151,17 @@ func (pc *PodCache) onEvent(_, pod *v1.Pod, ev model.Event) error {
 	// PodIP will be empty when pod is just created, but before the IP is assigned
 	// via UpdateStatus.
 	if len(ip) == 0 {
-		return nil
+		// However, in the case of an Eviction, the event that marks the pod as Failed may *also* have removed the IP.
+		// Thus, we check if the pod *used to* have an IP, then we do need to actually delete it.
+		if oldIP := pc.getIPByPod(config.NamespacedName(pod)); len(oldIP) > 0 {
+			log.Debugf("Pod %s has no IP, but was in the cache, continue so we can delete it", config.NamespacedName(pod).String())
+			// Temporarily set the IP to the old value so we can delete it. This is needed as the WorkloadInstance is keyed by IP.
+			pod.Status.PodIP = oldIP
+			ip = oldIP
+		} else {
+			log.Debugf("Pod %s has no IP", config.NamespacedName(pod).String())
+			return nil
+		}
 	}
 
 	key := config.NamespacedName(pod)
@@ -284,6 +294,13 @@ func (pc *PodCache) getPodKeys(addr string) []types.NamespacedName {
 	pc.RLock()
 	defer pc.RUnlock()
 	return pc.podsByIP[addr].UnsortedList()
+}
+
+// getIPByPod returns the pod or empty string if pod not found.
+func (pc *PodCache) getIPByPod(key types.NamespacedName) string {
+	pc.RLock()
+	defer pc.RUnlock()
+	return pc.ipByPods[key]
 }
 
 // getPodByIp returns the pod or nil if pod not found or an error occurred
