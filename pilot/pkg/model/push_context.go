@@ -993,6 +993,33 @@ func (ps *PushContext) ServiceForHostname(proxy *Proxy, hostname host.Name) *Ser
 	return nil
 }
 
+// GatewayServiceForHostname returns the service associated with a given hostname following GW's exported VS.
+func (ps *PushContext) GatewayServiceForHostname(proxy *Proxy, hostname host.Name) *Service {
+	// MergedGateway will be nil when there are no configs in the
+	// system during initial installation.
+	if proxy.MergedGateway == nil {
+		return nil
+	}
+
+	// This just grabs it from the SidecarScope, which for gateways, is `*/*`
+	svc := ps.ServiceForHostname(proxy, hostname)
+	svcHost := string(svc.Hostname)
+
+	// First check the extra services.
+	// TODO(Doug): Check if it is more performant to first merge the sets
+	if _, ok := ps.extraServicesForProxy(proxy)[svcHost]; ok {
+		return svc
+	}
+	// Now iterate over all the Gateways, and check if svc is in their VS destinations.
+	for _, gw := range proxy.MergedGateway.GatewayNameForServer {
+		if _, ok := ps.virtualServiceIndex.destinationsByGateway[gw][svcHost]; ok {
+			return svc
+		}
+	}
+
+	return nil
+}
+
 // IsServiceVisible returns true if the input service is visible to the given namespace.
 func (ps *PushContext) IsServiceVisible(service *Service, namespace string) bool {
 	if service == nil {
