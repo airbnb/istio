@@ -836,6 +836,38 @@ func (ps *PushContext) GatewayServices(proxy *Proxy) []*Service {
 	return gwSvcs
 }
 
+// GatewayServices returns the set of services which are referred from the proxy gateways.
+func (ps *PushContext) GatewayServicesForHostname(proxy *Proxy, hostname host.Name) []*Service {
+	svcs := proxy.SidecarScope.ServicesForHostname(hostname)
+
+	// MergedGateway will be nil when there are no configs in the
+	// system during initial installation.
+	if proxy.MergedGateway == nil {
+		return nil
+	}
+
+	// host set.
+	hostsFromGateways := ps.extraServicesForProxy(proxy)
+	for _, gw := range proxy.MergedGateway.GatewayNameForServer {
+		hostsFromGateways.Merge(ps.virtualServiceIndex.destinationsByGateway[gw])
+	}
+	log.Debugf("GatewayServices: gateway %v is exposing these hosts:%v", proxy.ID, hostsFromGateways)
+
+	gwSvcs := make([]*Service, 0, len(svcs))
+
+	for _, s := range svcs {
+		svcHost := string(s.Hostname)
+
+		if _, ok := hostsFromGateways[svcHost]; ok {
+			gwSvcs = append(gwSvcs, s)
+		}
+	}
+
+	log.Debugf("GatewayServices: gateways len(services)=%d, len(filtered)=%d", len(svcs), len(gwSvcs))
+
+	return gwSvcs
+}
+
 func (ps *PushContext) ServicesAttachedToMesh() map[string]sets.String {
 	return ps.virtualServiceIndex.referencedDestinations
 }

@@ -117,7 +117,7 @@ func (configgen *ConfigGeneratorImpl) BuildDeltaClusters(proxy *model.Proxy, upd
 			svcs, deleted = configgen.deltaFromServices(key, proxy, updates.Push, serviceClusters,
 				servicePortClusters, subsetClusters)
 		case kind.DestinationRule:
-			svcs, deleted = configgen.deltaFromDestinationRules(key, proxy, subsetClusters)
+			svcs, deleted = configgen.deltaFromDestinationRules(key, proxy, updates.Push, subsetClusters)
 		}
 		services = append(services, svcs...)
 		deletedClusters.InsertAll(deleted...)
@@ -170,7 +170,7 @@ func (configgen *ConfigGeneratorImpl) deltaFromServices(key model.ConfigKey, pro
 
 // deltaFromDestinationRules computes the delta clusters from the updated destination rules.
 func (configgen *ConfigGeneratorImpl) deltaFromDestinationRules(updatedDr model.ConfigKey, proxy *model.Proxy,
-	subsetClusters map[string]sets.String,
+	push *model.PushContext, subsetClusters map[string]sets.String,
 ) ([]*model.Service, []string) {
 	var deletedClusters []string
 	var services []*model.Service
@@ -183,41 +183,46 @@ func (configgen *ConfigGeneratorImpl) deltaFromDestinationRules(updatedDr model.
 			return nil, nil
 		}
 		dr := prevCfg.Spec.(*networking.DestinationRule)
-		services = append(services, proxy.SidecarScope.ServicesForHostname(host.Name(dr.Host))...)
-		// TODO(Doug): Check the the extra cluster is coming from a DR not SE, and fix accordingly.
 		if features.FilterGatewayClusterConfig && proxy.Type == model.Router {
+			services = append(services, push.GatewayServicesForHostname(proxy, host.Name(dr.Host))...)
 			svcDebug := ""
 			for _, s := range services {
 				svcDebug += fmt.Sprintf("%s, ", s.Hostname)
 			}
 			log.Debugf("[filtergw] deleted dest rule: %s, services: %s", dr.Host, svcDebug)
+		} else {
+			services = append(services, proxy.SidecarScope.ServicesForHostname(host.Name(dr.Host))...)
 		}
 
 	} else {
 		dr := cfg.Spec.(*networking.DestinationRule)
 		// Destinationrule was updated. Find matching services from updated destinationrule.
-		services = append(services, proxy.SidecarScope.ServicesForHostname(host.Name(dr.Host))...)
+
 		// TODO(Doug): Check the the extra cluster is coming from a DR not SE, and fix accordingly.
 		if features.FilterGatewayClusterConfig && proxy.Type == model.Router {
+			services = append(services, push.GatewayServicesForHostname(proxy, host.Name(dr.Host))...)
 			svcDebug := ""
 			for _, s := range services {
 				svcDebug += fmt.Sprintf("%s, ", s.Hostname)
 			}
 			log.Debugf("[filtergw] updated dest rule: %s, deleted services: %s", dr.Host, svcDebug)
+		} else {
+			services = append(services, proxy.SidecarScope.ServicesForHostname(host.Name(dr.Host))...)
 		}
 		// Check if destination rule host is changed, if yes, then we need to add previous host matching services.
 		prevCfg := proxy.PrevSidecarScope.DestinationRuleByName(updatedDr.Name, updatedDr.Namespace)
 		if prevCfg != nil {
 			prevDr := prevCfg.Spec.(*networking.DestinationRule)
 			if dr.Host != prevDr.Host {
-				services = append(services, proxy.SidecarScope.ServicesForHostname(host.Name(prevDr.Host))...)
-				// TODO(Doug): Check the the extra cluster is coming from a DR not SE, and fix accordingly.
 				if features.FilterGatewayClusterConfig && proxy.Type == model.Router {
+					services = append(services, push.GatewayServicesForHostname(proxy, host.Name(prevDr.Host))...)
 					svcDebug := ""
 					for _, s := range services {
 						svcDebug += fmt.Sprintf("%s, ", s.Hostname)
 					}
 					log.Debugf("[filtergw] changed dest rule: %s, deleted services: %s", dr.Host, svcDebug)
+				} else {
+					services = append(services, proxy.SidecarScope.ServicesForHostname(host.Name(prevDr.Host))...)
 				}
 			}
 		}
