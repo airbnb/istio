@@ -836,6 +836,18 @@ func (ps *PushContext) GatewayServices(proxy *Proxy) []*Service {
 	return gwSvcs
 }
 
+// GatewayServices returns the set of services which are referred from the proxy gateways.
+func (ps *PushContext) GatewayServicesForHostname(proxy *Proxy, hostname host.Name) []*Service {
+	services := ps.GatewayServices(proxy)
+	svcs := make([]*Service, len(services))
+	for _, svc := range services {
+		if svc.Hostname == hostname {
+			svcs = append(svcs, svc)
+		}
+	}
+	return svcs
+}
+
 func (ps *PushContext) ServicesAttachedToMesh() map[string]sets.String {
 	return ps.virtualServiceIndex.referencedDestinations
 }
@@ -990,6 +1002,17 @@ func (ps *PushContext) ServiceForHostname(proxy *Proxy, hostname host.Name) *Ser
 	}
 
 	// No service found
+	return nil
+}
+
+// GatewayServiceForHostname returns the service associated with a given hostname following GW's exported VS.
+func (ps *PushContext) GatewayServiceForHostname(proxy *Proxy, hostname host.Name) *Service {
+	services := ps.GatewayServices(proxy)
+	for _, svc := range services {
+		if svc.Hostname == hostname {
+			return svc
+		}
+	}
 	return nil
 }
 
