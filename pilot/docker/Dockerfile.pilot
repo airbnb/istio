@@ -11,12 +11,17 @@ FROM ${ISTIO_BASE_REGISTRY}/base:${BASE_VERSION} AS debug
 # The following section is used as base image if BASE_DISTRIBUTION=distroless
 FROM ${ISTIO_BASE_REGISTRY}/distroless:${BASE_VERSION} AS distroless
 
+# Install cellauth
+FROM 172631448019.dkr.ecr.us-east-1.amazonaws.com/ubuntu2204:2025-05-01-daily AS cellauth
+RUN /jorb/scripts/install-tool.sh cellauth
+
 # This will build the final image based on either debug or distroless from above
 # hadolint ignore=DL3006
 FROM ${BASE_DISTRIBUTION:-debug}
 
 ARG TARGETARCH
 COPY ${TARGETARCH:-amd64}/pilot-discovery /usr/local/bin/pilot-discovery
+COPY --from=cellauth /usr/local/bin/cellauth /usr/local/bin/cellauth
 
 USER 1337:1337
 
