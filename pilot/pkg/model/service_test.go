@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	fuzz "github.com/google/gofuzz"
 
+	v1beta1 "istio.io/api/type/v1beta1"
 	"istio.io/istio/pilot/pkg/features"
 	"istio.io/istio/pkg/cluster"
 	"istio.io/istio/pkg/config/constants"
@@ -561,7 +562,23 @@ func BenchmarkServiceDeepCopy(b *testing.B) {
 }
 
 func TestFuzzServiceDeepCopy(t *testing.T) {
-	fuzzer := fuzz.New()
+	fuzzer := fuzz.New().NilChance(0.5).Funcs(
+		func(t *ExportToTarget, c fuzz.Continue) {
+			// Provide a simple valid ExportToTarget to avoid protobuf nil issues
+			*t = ExportToTarget{
+				StaticNamespaces: nil,
+				Selectors:        nil,
+			}
+		},
+		func(s *v1beta1.LabelSelector, c fuzz.Continue) {
+			// Provide an empty LabelSelector to avoid protobuf nil issues
+			*s = v1beta1.LabelSelector{}
+		},
+		func(s *v1beta1.LabelSelectorRequirement, c fuzz.Continue) {
+			// Provide an empty LabelSelectorRequirement to avoid protobuf nil issues
+			*s = v1beta1.LabelSelectorRequirement{}
+		},
+	)
 	originalSvc := &Service{}
 	fuzzer.Fuzz(originalSvc)
 	copied := originalSvc.DeepCopy()

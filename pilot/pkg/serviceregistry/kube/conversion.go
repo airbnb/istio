@@ -72,7 +72,24 @@ func ConvertService(svc corev1.Service, domainSuffix string, clusterID cluster.I
 		ports = append(ports, convertPort(port))
 	}
 
-	var exportTo sets.Set[visibility.Instance]
+	// Parse exportTo annotation
+	var exportTo *model.ExportToTarget
+	if exportToAnnotation, ok := svc.Annotations[annotation.NetworkingExportTo.Name]; ok {
+		if exportToAnnotation != "" {
+			namespaces := strings.Split(exportToAnnotation, ",")
+			// Trim whitespace from each namespace
+			for i := range namespaces {
+				namespaces[i] = strings.TrimSpace(namespaces[i])
+			}
+			// Parse using ParseExportTo (no selectors from annotations)
+			exportTo, _ = model.ParseExportTo(namespaces, nil)
+			// Ignore errors - invalid exportTo will result in nil which is acceptable
+		} else {
+			// Empty annotation value - return empty ExportToTarget
+			exportTo = &model.ExportToTarget{StaticNamespaces: sets.New[visibility.Instance]()}
+		}
+	}
+
 	serviceaccounts := make([]string, 0)
 	if svc.Annotations[annotation.AlphaCanonicalServiceAccounts.Name] != "" {
 		serviceaccounts = append(serviceaccounts, strings.Split(svc.Annotations[annotation.AlphaCanonicalServiceAccounts.Name], ",")...)
@@ -80,14 +97,6 @@ func ConvertService(svc corev1.Service, domainSuffix string, clusterID cluster.I
 	if svc.Annotations[annotation.AlphaKubernetesServiceAccounts.Name] != "" {
 		for _, ksa := range strings.Split(svc.Annotations[annotation.AlphaKubernetesServiceAccounts.Name], ",") {
 			serviceaccounts = append(serviceaccounts, kubeToIstioServiceAccount(ksa, svc.Namespace, trustDomain))
-		}
-	}
-	if svc.Annotations[annotation.NetworkingExportTo.Name] != "" {
-		namespaces := strings.Split(svc.Annotations[annotation.NetworkingExportTo.Name], ",")
-		exportTo = sets.NewWithLength[visibility.Instance](len(namespaces))
-		for _, ns := range namespaces {
-			ns = strings.TrimSpace(ns)
-			exportTo.Insert(visibility.Instance(ns))
 		}
 	}
 

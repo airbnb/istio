@@ -148,6 +148,17 @@ type Environment struct {
 
 	// Cache for XDS resources.
 	Cache XdsCache
+
+	// NamespaceLabelsGetter provides a way to look up namespace labels for dynamic exportTo visibility checks
+	NamespaceLabelsGetter NamespaceLabelsGetter
+}
+
+// NamespaceLabelsGetter is an interface for looking up namespace labels.
+// This is used to support dynamic exportTo visibility based on namespace label selectors.
+type NamespaceLabelsGetter interface {
+	// GetNamespaceLabels returns the labels for a given namespace.
+	// Returns nil if the namespace is not found or labels cannot be retrieved.
+	GetNamespaceLabels(namespace string) map[string]string
 }
 
 func (e *Environment) Mesh() *meshconfig.MeshConfig {
@@ -230,6 +241,15 @@ func (e *Environment) InitNetworksManager(updater XDSUpdater) (err error) {
 
 func (e *Environment) ClusterLocal() ClusterLocalProvider {
 	return e.clusterLocalServices
+}
+
+// GetNamespaceLabels returns the labels for a given namespace.
+// Returns nil if the namespace is not found or if no NamespaceLabelsGetter is configured.
+func (e *Environment) GetNamespaceLabels(namespace string) map[string]string {
+	if e == nil || e.NamespaceLabelsGetter == nil {
+		return nil
+	}
+	return e.NamespaceLabelsGetter.GetNamespaceLabels(namespace)
 }
 
 func (e *Environment) GetProxyConfigOrDefault(ns string, labels, annotations map[string]string, meshConfig *meshconfig.MeshConfig) *meshconfig.ProxyConfig {

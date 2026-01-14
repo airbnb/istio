@@ -44,6 +44,14 @@ import (
 	"istio.io/istio/pkg/util/sets"
 )
 
+// makeExportTo creates an ExportToTarget from visibility instances.
+// This is a test helper function to make it easier to create ExportToTarget in tests.
+func makeExportToFromInstances(vis ...visibility.Instance) *ExportToTarget {
+	return &ExportToTarget{
+		StaticNamespaces: sets.New(vis...),
+	}
+}
+
 var (
 	port9999 = []*Port{
 		{
@@ -919,7 +927,7 @@ var (
 			Attributes: ServiceAttributes{
 				Name:      "foo",
 				Namespace: "ns1",
-				ExportTo:  sets.New(visibility.Private),
+				ExportTo:  makeExportToFromInstances(visibility.Private),
 			},
 		},
 		{
@@ -2693,7 +2701,7 @@ func TestCreateSidecarScope(t *testing.T) {
 					Attributes: ServiceAttributes{
 						Name:      "foo",
 						Namespace: "ns1",
-						ExportTo:  sets.New(visibility.Public),
+						ExportTo:  makeExportToFromInstances(visibility.Public),
 					},
 				},
 				{
@@ -2703,7 +2711,7 @@ func TestCreateSidecarScope(t *testing.T) {
 					Attributes: ServiceAttributes{
 						Name:      "bar",
 						Namespace: "ns1",
-						ExportTo:  sets.New(visibility.Private),
+						ExportTo:  makeExportToFromInstances(visibility.Private),
 					},
 				},
 			},
@@ -2714,7 +2722,7 @@ func TestCreateSidecarScope(t *testing.T) {
 					Attributes: ServiceAttributes{
 						Name:      "foo",
 						Namespace: "ns1",
-						ExportTo:  sets.New(visibility.Public),
+						ExportTo:  makeExportToFromInstances(visibility.Public),
 					},
 				},
 			},

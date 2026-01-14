@@ -52,6 +52,7 @@ import (
 	sec_model "istio.io/istio/pilot/pkg/security/model"
 	"istio.io/istio/pilot/pkg/server"
 	"istio.io/istio/pilot/pkg/serviceregistry/aggregate"
+	kubecontroller "istio.io/istio/pilot/pkg/serviceregistry/kube/controller"
 	"istio.io/istio/pilot/pkg/serviceregistry/provider"
 	"istio.io/istio/pilot/pkg/serviceregistry/serviceentry"
 	"istio.io/istio/pilot/pkg/status"
@@ -293,6 +294,9 @@ func NewServer(args *PilotArgs, initFuncs ...func(*Server)) (*Server, error) {
 		namespaces := kclient.New[*corev1.Namespace](s.kubeClient)
 		filter := namespace.NewDiscoveryNamespacesFilter(namespaces, s.environment.Watcher, s.internalStop)
 		s.kubeClient = kubelib.SetObjectFilter(s.kubeClient, filter)
+
+		// Set up namespace labels getter for dynamic exportTo visibility based on label selectors
+		s.environment.NamespaceLabelsGetter = kubecontroller.NewKubeNamespaceLabelsGetter(namespaces)
 	}
 
 	s.initMeshNetworks(args, s.fileWatcher)

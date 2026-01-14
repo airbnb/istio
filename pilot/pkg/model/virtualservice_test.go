@@ -35,6 +35,14 @@ import (
 	"istio.io/istio/pkg/util/sets"
 )
 
+// makeExportToSimple creates an ExportToTarget from a single visibility instance.
+// This is a test helper function.
+func makeExportToSimple(vis visibility.Instance) *ExportToTarget {
+	return &ExportToTarget{
+		StaticNamespaces: sets.New(vis),
+	}
+}
+
 const wildcardIP = "0.0.0.0"
 
 func TestMergeVirtualServices(t *testing.T) {
@@ -2359,7 +2367,7 @@ func buildHTTPService(hostname string, v visibility.Instance, ip, namespace stri
 		Attributes: ServiceAttributes{
 			ServiceRegistry: provider.Kubernetes,
 			Namespace:       namespace,
-			ExportTo:        sets.New(v),
+			ExportTo:        makeExportToSimple(v),
 		},
 	}
 	if ip == wildcardIP {

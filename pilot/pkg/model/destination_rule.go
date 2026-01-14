@@ -24,7 +24,6 @@ import (
 	"istio.io/istio/pkg/config"
 	"istio.io/istio/pkg/config/host"
 	"istio.io/istio/pkg/config/labels"
-	"istio.io/istio/pkg/config/visibility"
 	"istio.io/istio/pkg/util/sets"
 )
 
@@ -38,7 +37,7 @@ import (
 // 2. If the original rule did not have any top level traffic policy, traffic policies from the new rule will be
 // used.
 // 3. If the original rule did not have any exportTo, exportTo settings from the new rule will be used.
-func (ps *PushContext) mergeDestinationRule(p *consolidatedDestRules, destRuleConfig config.Config, exportToSet sets.Set[visibility.Instance]) {
+func (ps *PushContext) mergeDestinationRule(p *consolidatedDestRules, destRuleConfig config.Config, exportToSet *ExportToTarget) {
 	rule := destRuleConfig.Spec.(*networking.DestinationRule)
 	resolvedHost := host.Name(rule.Host)
 
@@ -57,7 +56,7 @@ func (ps *PushContext) mergeDestinationRule(p *consolidatedDestRules, destRuleCo
 			if features.EnableEnhancedDestinationRuleMerge {
 				if exportToSet.Equals(mdr.exportTo) {
 					appendSeparately = false
-				} else if len(mdr.exportTo) > 0 && exportToSet.SupersetOf(mdr.exportTo) {
+				} else if mdr.exportTo.Len() > 0 && exportToSet.IsSuperset(mdr.exportTo) {
 					// If the new exportTo is superset of existing, merge and also append as a standalone one
 					appendSeparately = true
 				} else {
@@ -126,7 +125,7 @@ func (ps *PushContext) mergeDestinationRule(p *consolidatedDestRules, destRuleCo
 	destRules[resolvedHost] = append(destRules[resolvedHost], ConvertConsolidatedDestRule(&destRuleConfig, exportToSet))
 }
 
-func ConvertConsolidatedDestRule(cfg *config.Config, exportToSet sets.Set[visibility.Instance]) *ConsolidatedDestRule {
+func ConvertConsolidatedDestRule(cfg *config.Config, exportToSet *ExportToTarget) *ConsolidatedDestRule {
 	return &ConsolidatedDestRule{
 		exportTo: exportToSet,
 		rule:     cfg,

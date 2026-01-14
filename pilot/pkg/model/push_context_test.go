@@ -58,6 +58,14 @@ import (
 	"istio.io/istio/pkg/util/sets"
 )
 
+// makeExportTo creates an ExportToTarget from visibility instances.
+// This is a test helper function to make it easier to create ExportToTarget in tests.
+func makeExportTo(vis ...visibility.Instance) *ExportToTarget {
+	return &ExportToTarget{
+		StaticNamespaces: sets.New(vis...),
+	}
+}
+
 func TestMergeUpdateRequest(t *testing.T) {
 	push0 := &PushContext{}
 	// trivially different push contexts just for testing
@@ -1446,7 +1454,7 @@ func TestServiceIndex(t *testing.T) {
 				Ports:    allPorts,
 				Attributes: ServiceAttributes{
 					Namespace: "test1",
-					ExportTo:  sets.New(visibility.Public),
+					ExportTo:  makeExportTo(visibility.Public),
 				},
 			},
 			{
@@ -1454,7 +1462,7 @@ func TestServiceIndex(t *testing.T) {
 				Ports:    allPorts,
 				Attributes: ServiceAttributes{
 					Namespace: "test1",
-					ExportTo:  sets.New(visibility.Private),
+					ExportTo:  makeExportTo(visibility.Private),
 				},
 			},
 			{
@@ -1462,7 +1470,7 @@ func TestServiceIndex(t *testing.T) {
 				Ports:    allPorts,
 				Attributes: ServiceAttributes{
 					Namespace: "test1",
-					ExportTo:  sets.New(visibility.None),
+					ExportTo:  makeExportTo(visibility.None),
 				},
 			},
 			{
@@ -1470,7 +1478,7 @@ func TestServiceIndex(t *testing.T) {
 				Ports:    allPorts,
 				Attributes: ServiceAttributes{
 					Namespace: "test1",
-					ExportTo:  sets.New(visibility.Instance("namespace")),
+					ExportTo:  makeExportTo(visibility.Instance("namespace")),
 				},
 			},
 		},
@@ -1571,7 +1579,7 @@ func TestIsServiceVisible(t *testing.T) {
 			service: &Service{
 				Attributes: ServiceAttributes{
 					Namespace: "foo",
-					ExportTo:  sets.New(visibility.Private),
+					ExportTo:  makeExportTo(visibility.Private),
 				},
 			},
 			expect: true,
@@ -1582,7 +1590,7 @@ func TestIsServiceVisible(t *testing.T) {
 			service: &Service{
 				Attributes: ServiceAttributes{
 					Namespace: "bar",
-					ExportTo:  sets.New(visibility.Private),
+					ExportTo:  makeExportTo(visibility.Private),
 				},
 			},
 			expect: false,
@@ -1593,7 +1601,7 @@ func TestIsServiceVisible(t *testing.T) {
 			service: &Service{
 				Attributes: ServiceAttributes{
 					Namespace: "bar",
-					ExportTo:  sets.New(visibility.Public),
+					ExportTo:  makeExportTo(visibility.Public),
 				},
 			},
 			expect: true,
@@ -1604,7 +1612,7 @@ func TestIsServiceVisible(t *testing.T) {
 			service: &Service{
 				Attributes: ServiceAttributes{
 					Namespace: "bar",
-					ExportTo:  sets.New(visibility.Instance("foo")),
+					ExportTo:  makeExportTo(visibility.Instance("foo")),
 				},
 			},
 			expect: true,
@@ -1615,7 +1623,7 @@ func TestIsServiceVisible(t *testing.T) {
 			service: &Service{
 				Attributes: ServiceAttributes{
 					Namespace: "bar",
-					ExportTo:  sets.New(visibility.Instance("baz")),
+					ExportTo:  makeExportTo(visibility.Instance("baz")),
 				},
 			},
 			expect: false,
@@ -1626,7 +1634,7 @@ func TestIsServiceVisible(t *testing.T) {
 			service: &Service{
 				Attributes: ServiceAttributes{
 					Namespace: "bar",
-					ExportTo:  sets.New(visibility.None),
+					ExportTo:  makeExportTo(visibility.None),
 				},
 			},
 			expect: false,
@@ -1637,7 +1645,7 @@ func TestIsServiceVisible(t *testing.T) {
 			service: &Service{
 				Attributes: ServiceAttributes{
 					Namespace: "bar",
-					ExportTo: sets.New(
+					ExportTo: makeExportTo(
 						visibility.Public,
 						visibility.None,
 					),
@@ -1651,7 +1659,7 @@ func TestIsServiceVisible(t *testing.T) {
 			service: &Service{
 				Attributes: ServiceAttributes{
 					Namespace: "bar",
-					ExportTo: sets.New(
+					ExportTo: makeExportTo(
 						visibility.Private,
 						visibility.None,
 					),
@@ -1732,7 +1740,7 @@ func TestInitPushContext(t *testing.T) {
 				Ports:    allPorts,
 				Attributes: ServiceAttributes{
 					Namespace: "test1",
-					ExportTo:  sets.New(visibility.Public),
+					ExportTo:  makeExportTo(visibility.Public),
 				},
 			},
 		},
@@ -3194,14 +3202,14 @@ func TestServiceWithExportTo(t *testing.T) {
 		Hostname: "svc1",
 		Attributes: ServiceAttributes{
 			Namespace: "test1",
-			ExportTo:  sets.New(visibility.Private, visibility.Instance("ns1")),
+			ExportTo:  makeExportTo(visibility.Private, visibility.Instance("ns1")),
 		},
 	}
 	svc2 := &Service{
 		Hostname: "svc2",
 		Attributes: ServiceAttributes{
 			Namespace: "test2",
-			ExportTo: sets.New(
+			ExportTo: makeExportTo(
 				visibility.Instance("test1"),
 				visibility.Instance("ns1"),
 				visibility.Instance("test2"),
@@ -3212,7 +3220,7 @@ func TestServiceWithExportTo(t *testing.T) {
 		Hostname: "svc3",
 		Attributes: ServiceAttributes{
 			Namespace: "test3",
-			ExportTo: sets.New(
+			ExportTo: makeExportTo(
 				visibility.Instance("test1"),
 				visibility.Public,
 				visibility.Instance("test2"),
@@ -3293,7 +3301,7 @@ func TestInstancesByPort(t *testing.T) {
 		Attributes: ServiceAttributes{
 			Namespace:       "test5",
 			ServiceRegistry: provider.External,
-			ExportTo: sets.New(
+			ExportTo: makeExportTo(
 				visibility.Instance("test5"),
 			),
 		},
@@ -3305,7 +3313,7 @@ func TestInstancesByPort(t *testing.T) {
 		Attributes: ServiceAttributes{
 			Namespace:       "test5",
 			ServiceRegistry: provider.External,
-			ExportTo: sets.New(
+			ExportTo: makeExportTo(
 				visibility.Instance("test5"),
 			),
 		},
@@ -3692,7 +3700,7 @@ func BenchmarkInitServiceAccounts(b *testing.B) {
 			Ports:    allPorts,
 			Attributes: ServiceAttributes{
 				Namespace: "test1",
-				ExportTo:  sets.New(visibility.Public),
+				ExportTo:  makeExportTo(visibility.Public),
 			},
 		},
 		{
@@ -3700,7 +3708,7 @@ func BenchmarkInitServiceAccounts(b *testing.B) {
 			Ports:    allPorts,
 			Attributes: ServiceAttributes{
 				Namespace: "test1",
-				ExportTo:  sets.New(visibility.Private),
+				ExportTo:  makeExportTo(visibility.Private),
 			},
 		},
 		{
@@ -3708,7 +3716,7 @@ func BenchmarkInitServiceAccounts(b *testing.B) {
 			Ports:    allPorts,
 			Attributes: ServiceAttributes{
 				Namespace: "test1",
-				ExportTo:  sets.New(visibility.None),
+				ExportTo:  makeExportTo(visibility.None),
 			},
 		},
 		{
@@ -3716,7 +3724,7 @@ func BenchmarkInitServiceAccounts(b *testing.B) {
 			Ports:    allPorts,
 			Attributes: ServiceAttributes{
 				Namespace: "test1",
-				ExportTo:  sets.New(visibility.Instance("namespace")),
+				ExportTo:  makeExportTo(visibility.Instance("namespace")),
 			},
 		},
 	}
