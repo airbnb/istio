@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	"istio.io/istio/pkg/kube"
+	"istio.io/istio/pkg/kube/kclient"
 	"istio.io/istio/pkg/test"
 	"istio.io/istio/pkg/test/util/retry"
 )
@@ -33,7 +34,8 @@ func TestExportToFilter(t *testing.T) {
 	client.RunAndWait(stop)
 
 	// Create the filter
-	filter := NewExportToFilter(client.Kube().CoreV1().Namespaces(), stop)
+	namespaces := kclient.New[*corev1.Namespace](client)
+	filter := NewExportToFilter(namespaces, stop)
 
 	// Create test namespaces
 	ns1 := &corev1.Namespace{
@@ -216,7 +218,8 @@ func TestExportToFilterConcurrency(t *testing.T) {
 	client := kube.NewFakeClient()
 	client.RunAndWait(stop)
 
-	filter := NewExportToFilter(client.Kube().CoreV1().Namespaces(), stop)
+	namespaces := kclient.New[*corev1.Namespace](client)
+	filter := NewExportToFilter(namespaces, stop)
 
 	// Create a namespace
 	ns := &corev1.Namespace{
