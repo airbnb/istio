@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
-	meshapi "istio.io/api/mesh/v1alpha1"
+	typev1beta1 "istio.io/api/type/v1beta1"
 	"istio.io/istio/pkg/config/mesh"
 	"istio.io/istio/pkg/kube"
 	"istio.io/istio/pkg/kube/controllers"
@@ -182,7 +182,7 @@ func extractObjectNamespace(obj any) (string, bool) {
 	return object.GetNamespace(), true
 }
 
-func LabelSelectorAsSelector(ps *meshapi.LabelSelector) (labels.Selector, error) {
+func LabelSelectorAsSelector(ps *typev1beta1.LabelSelector) (labels.Selector, error) {
 	if ps == nil {
 		return labels.Nothing(), nil
 	}
@@ -224,7 +224,7 @@ func LabelSelectorAsSelector(ps *meshapi.LabelSelector) (labels.Selector, error)
 
 // SelectorsChanged initializes the discovery filter state with the discovery selectors and selected namespaces
 func (d *discoveryNamespacesFilter) selectorsChanged(
-	discoverySelectors []*meshapi.LabelSelector,
+	discoverySelectors []*typev1beta1.LabelSelector,
 	notify bool,
 ) {
 	// Call closure to allow safe defer lock handling

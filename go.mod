@@ -235,3 +235,6 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.1 // indirect
 )
+
+// Local development: Use local istio/api for exportToSelectors feature
+replace istio.io/api => ../istio-api

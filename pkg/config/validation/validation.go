@@ -679,6 +679,8 @@ var ValidateDestinationRule = RegisterValidateFunc("ValidateDestinationRule",
 		}
 		v = AppendValidation(v,
 			validateExportTo(cfg.Namespace, rule.ExportTo, false, rule.GetWorkloadSelector() != nil))
+		v = AppendValidation(v,
+			validateExportToSelectors(cfg.Namespace, rule.ExportTo, rule.ExportToSelectors, rule.GetWorkloadSelector() != nil))
 
 		v = AppendValidation(v, validateWorkloadSelector(rule.GetWorkloadSelector()))
 
@@ -742,6 +744,78 @@ func validateExportTo(namespace string, exportTo []string, isServiceEntry bool, 
 		if exportToSet.Contains(string(visibility.None)) {
 			if len(exportTo) > 1 {
 				errs = appendErrors(errs, fmt.Errorf("cannot export service entry to no one (~) and someone"))
+			}
+		}
+	}
+
+	return errs
+}
+
+func validateExportToSelectors(namespace string, exportTo []string, exportToSelectors []*type_beta.LabelSelector, isDestinationRuleWithSelector bool) (errs error) {
+	if len(exportToSelectors) == 0 {
+		return nil
+	}
+
+	// DestinationRule with workload selector cannot use export_to_selectors
+	if isDestinationRuleWithSelector {
+		return fmt.Errorf("destination rule with workload selector cannot use export_to_selectors")
+	}
+
+	// Cannot mix "*" in exportTo with export_to_selectors
+	if len(exportTo) > 0 {
+		exportToSet := sets.New[string]()
+		for _, e := range exportTo {
+			exportToSet.Insert(e)
+		}
+		if exportToSet.Contains(string(visibility.Public)) {
+			return fmt.Errorf("cannot use both public (*) in exportTo and export_to_selectors")
+		}
+	}
+
+	// Validate each label selector
+	for i, selector := range exportToSelectors {
+		if selector == nil {
+			errs = appendErrors(errs, fmt.Errorf("export_to_selectors[%d] cannot be nil", i))
+			continue
+		}
+
+		// Validate matchLabels
+		for key, value := range selector.MatchLabels {
+			if key == "" {
+				errs = appendErrors(errs, fmt.Errorf("export_to_selectors[%d]: label key cannot be empty", i))
+			}
+			if value == "" {
+				errs = appendErrors(errs, fmt.Errorf("export_to_selectors[%d]: label value for key %q cannot be empty", i, key))
+			}
+		}
+
+		// Validate matchExpressions
+		for j, expr := range selector.MatchExpressions {
+			if expr == nil {
+				errs = appendErrors(errs, fmt.Errorf("export_to_selectors[%d].matchExpressions[%d] cannot be nil", i, j))
+				continue
+			}
+
+			if expr.Key == "" {
+				errs = appendErrors(errs, fmt.Errorf("export_to_selectors[%d].matchExpressions[%d]: key cannot be empty", i, j))
+			}
+
+			// Validate operator
+			validOps := sets.New("In", "NotIn", "Exists", "DoesNotExist")
+			if !validOps.Contains(expr.Operator) {
+				errs = appendErrors(errs, fmt.Errorf("export_to_selectors[%d].matchExpressions[%d]: invalid operator %q, must be one of: In, NotIn, Exists, DoesNotExist", i, j, expr.Operator))
+				continue
+			}
+
+			// Validate values based on operator
+			if expr.Operator == "In" || expr.Operator == "NotIn" {
+				if len(expr.Values) == 0 {
+					errs = appendErrors(errs, fmt.Errorf("export_to_selectors[%d].matchExpressions[%d]: values array must be non-empty for operator %q", i, j, expr.Operator))
+				}
+			} else if expr.Operator == "Exists" || expr.Operator == "DoesNotExist" {
+				if len(expr.Values) > 0 {
+					errs = appendErrors(errs, fmt.Errorf("export_to_selectors[%d].matchExpressions[%d]: values array must be empty for operator %q", i, j, expr.Operator))
+				}
 			}
 		}
 	}
@@ -1815,6 +1889,7 @@ var ValidateVirtualService = RegisterValidateFunc("ValidateVirtualService",
 		}
 
 		errs = AppendValidation(errs, validateExportTo(cfg.Namespace, virtualService.ExportTo, false, false))
+		errs = AppendValidation(errs, validateExportToSelectors(cfg.Namespace, virtualService.ExportTo, virtualService.ExportToSelectors, false))
 
 		warnUnused := func(ruleno, reason string) {
 			errs = AppendValidation(errs, WrapWarning(&AnalysisAwareError{
@@ -3095,6 +3170,7 @@ var ValidateServiceEntry = RegisterValidateFunc("ValidateServiceEntry",
 		}
 
 		errs = AppendValidation(errs, validateExportTo(cfg.Namespace, serviceEntry.ExportTo, true, false))
+		errs = AppendValidation(errs, validateExportToSelectors(cfg.Namespace, serviceEntry.ExportTo, serviceEntry.ExportToSelectors, false))
 		return errs.Unwrap()
 	})
 

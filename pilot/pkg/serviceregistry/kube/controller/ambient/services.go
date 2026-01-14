@@ -27,6 +27,7 @@ import (
 
 	meshapi "istio.io/api/mesh/v1alpha1"
 	"istio.io/api/networking/v1alpha3"
+	typev1beta1 "istio.io/api/type/v1beta1"
 	networkingclient "istio.io/client-go/pkg/apis/networking/v1"
 	"istio.io/istio/pilot/pkg/features"
 	"istio.io/istio/pilot/pkg/model"
@@ -324,8 +325,8 @@ func typedServiceServiceBuilder(
 	}
 }
 
-// LabelSelectorAsSelector converts a mesh api LabelSelector to a labels.Selector.
-func LabelSelectorAsSelector(ps *meshapi.LabelSelector) (labels.Selector, error) {
+// LabelSelectorAsSelector converts a type v1beta1 LabelSelector to a labels.Selector.
+func LabelSelectorAsSelector(ps *typev1beta1.LabelSelector) (labels.Selector, error) {
 	if ps == nil {
 		return labels.Nothing(), nil
 	}
