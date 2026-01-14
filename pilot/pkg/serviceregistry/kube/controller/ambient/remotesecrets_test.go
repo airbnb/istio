@@ -32,7 +32,6 @@ import (
 
 	"istio.io/api/label"
 	meshconfig "istio.io/api/mesh/v1alpha1"
-	"istio.io/api/type/v1beta1"
 	"istio.io/istio/pilot/pkg/features"
 	"istio.io/istio/pilot/pkg/serviceregistry/kube/controller/ambient/multicluster"
 	"istio.io/istio/pkg/cluster"
@@ -364,7 +363,7 @@ func TestObjectFilter(t *testing.T) {
 		)
 	}
 	mesh := meshwatcher.NewTestWatcher(&meshconfig.MeshConfig{
-		DiscoverySelectors: []*v1beta1.LabelSelector{
+		DiscoverySelectors: []*meshconfig.LabelSelector{
 			{
 				MatchLabels: map[string]string{
 					"kubernetes.io/metadata.name": "allowed",
