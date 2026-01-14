@@ -49,7 +49,6 @@ import (
 	"istio.io/istio/pkg/config/labels"
 	"istio.io/istio/pkg/config/protocol"
 	"istio.io/istio/pkg/config/schema/kind"
-	"istio.io/istio/pkg/config/visibility"
 	"istio.io/istio/pkg/maps"
 	pm "istio.io/istio/pkg/model"
 	"istio.io/istio/pkg/network"
@@ -727,7 +726,8 @@ type ServiceAttributes struct {
 	Labels map[string]string
 	// ExportTo defines the visibility of Service in
 	// a namespace when the namespace is imported.
-	ExportTo sets.Set[visibility.Instance]
+	// It supports both static namespace names and label selectors for dynamic matching.
+	ExportTo *ExportToTarget
 
 	// LabelSelectors are the labels used by the service to select workloads.
 	// Applicable to both Kubernetes and ServiceEntries.
@@ -829,9 +829,7 @@ func (s *ServiceAttributes) DeepCopy() ServiceAttributes {
 	out := *s
 
 	out.Labels = maps.Clone(s.Labels)
-	if s.ExportTo != nil {
-		out.ExportTo = s.ExportTo.Copy()
-	}
+	out.ExportTo = s.ExportTo.Copy()
 
 	out.LabelSelectors = maps.Clone(s.LabelSelectors)
 	out.ClusterExternalAddresses = s.ClusterExternalAddresses.DeepCopy()
@@ -868,7 +866,12 @@ func (s *ServiceAttributes) Equals(other *ServiceAttributes) bool {
 		return false
 	}
 
-	if !maps.Equal(s.ExportTo, other.ExportTo) {
+	if s.ExportTo != nil && other.ExportTo != nil {
+		if !s.ExportTo.Equals(other.ExportTo) {
+			return false
+		}
+	} else if s.ExportTo != other.ExportTo {
+		// One is nil and the other is not
 		return false
 	}
 

@@ -291,7 +291,8 @@ type consolidatedDestRules struct {
 // ConsolidatedDestRule represents a dr and from which it is consolidated.
 type ConsolidatedDestRule struct {
 	// the list of namespaces to which this destination rule has been exported to
-	exportTo sets.Set[visibility.Instance]
+	// It supports both static namespace names and label selectors for dynamic matching.
+	exportTo *ExportToTarget
 	// rule is merged from the following destinationRules.
 	rule *config.Config
 	// the original dest rules from which above rule is merged.
@@ -1077,13 +1078,26 @@ func (ps *PushContext) ServiceForHostname(proxy *Proxy, hostname host.Name) *Ser
 }
 
 // IsServiceVisible returns true if the input service is visible to the given namespace.
+// This function checks both static namespace names and label selectors in exportTo.
+// For label selector matching, it uses the provided NamespaceLabelsGetter to look up namespace labels.
 func (ps *PushContext) IsServiceVisible(service *Service, namespace string) bool {
+	return ps.IsServiceVisibleWithLabels(service, namespace, nil)
+}
+
+// IsServiceVisibleWithLabels returns true if the input service is visible to the given namespace.
+// This function checks both static namespace names and label selectors in exportTo.
+// If env is provided, it will use it to look up namespace labels for dynamic selector matching.
+// If env is nil or doesn't have a NamespaceLabelsGetter, only static namespace checks are performed.
+func (ps *PushContext) IsServiceVisibleWithLabels(service *Service, namespace string, env *Environment) bool {
 	if service == nil {
 		return false
 	}
 
 	ns := service.Attributes.Namespace
-	if service.Attributes.ExportTo.IsEmpty() {
+	exportTo := service.Attributes.ExportTo
+
+	// Handle empty exportTo - use defaults
+	if exportTo.IsEmpty() {
 		if ps.exportToDefaults.service.Contains(visibility.Private) {
 			return ns == namespace
 		} else if ps.exportToDefaults.service.Contains(visibility.Public) {
@@ -1091,9 +1105,24 @@ func (ps *PushContext) IsServiceVisible(service *Service, namespace string) bool
 		}
 	}
 
-	return service.Attributes.ExportTo.Contains(visibility.Public) ||
-		(service.Attributes.ExportTo.Contains(visibility.Private) && ns == namespace) ||
-		service.Attributes.ExportTo.Contains(visibility.Instance(namespace))
+	// Check if service has label selectors and we have a way to look up namespace labels
+	if exportTo.HasSelectors() && env != nil {
+		namespaceLabels := env.GetNamespaceLabels(namespace)
+		// Use the Matches method which handles both static namespaces and label selectors
+		if exportTo.Matches(namespace, namespaceLabels) {
+			return true
+		}
+		// Fall through to check private visibility
+		if exportTo.Contains(visibility.Private) && ns == namespace {
+			return true
+		}
+		return false
+	}
+
+	// Static namespace visibility check (legacy path when no selectors or no env)
+	return exportTo.Contains(visibility.Public) ||
+		(exportTo.Contains(visibility.Private) && ns == namespace) ||
+		exportTo.Contains(visibility.Instance(namespace))
 }
 
 // VirtualServicesForGateway lists all virtual services bound to the specified gateways
@@ -1579,7 +1608,7 @@ func (ps *PushContext) initServiceRegistry(env *Environment, configsUpdate sets.
 				continue
 			}
 			// . or other namespaces
-			for exportTo := range s.Attributes.ExportTo {
+			for _, exportTo := range s.Attributes.ExportTo.StaticNamespacesList() {
 				if exportTo == visibility.Private || string(exportTo) == ns {
 					// exportTo with same namespace is effectively private
 					ps.ServiceIndex.privateByNamespace[ns] = append(ps.ServiceIndex.privateByNamespace[ns], s)
@@ -1588,6 +1617,8 @@ func (ps *PushContext) initServiceRegistry(env *Environment, configsUpdate sets.
 					ps.ServiceIndex.exportedToNamespace[string(exportTo)] = append(ps.ServiceIndex.exportedToNamespace[string(exportTo)], s)
 				}
 			}
+			// Note: Services with label selectors in exportTo are not currently indexed
+			// They will be handled dynamically through IsServiceVisible with namespace labels
 		}
 	}
 
@@ -1775,7 +1806,21 @@ func (ps *PushContext) initVirtualServices(env *Environment) {
 		ns := virtualService.Namespace
 		rule := virtualService.Spec.(*networking.VirtualService)
 		gwNames := getGatewayNames(rule)
-		if len(rule.ExportTo) == 0 {
+
+		var exportToSet *ExportToTarget
+		var err error
+		if len(rule.ExportTo) == 0 && len(rule.ExportToSelectors) == 0 {
+			// No exportTo in virtualService. Use empty set to trigger default behavior
+			exportToSet = &ExportToTarget{StaticNamespaces: sets.New[visibility.Instance]()}
+		} else {
+			exportToSet, err = ParseExportTo(rule.ExportTo, rule.ExportToSelectors)
+			if err != nil {
+				log.Warnf("Failed to parse exportTo for VirtualService %s/%s: %v", virtualService.Namespace, virtualService.Name, err)
+				exportToSet = &ExportToTarget{StaticNamespaces: sets.New[visibility.Instance]()}
+			}
+		}
+
+		if exportToSet.IsEmpty() {
 			// No exportTo in virtualService. Use the global default
 			// We only honor ., *
 			if ps.exportToDefaults.virtualService.Contains(visibility.Private) {
@@ -1791,10 +1836,6 @@ func (ps *PushContext) initVirtualServices(env *Environment) {
 				}
 			}
 		} else {
-			exportToSet := sets.NewWithLength[visibility.Instance](len(rule.ExportTo))
-			for _, e := range rule.ExportTo {
-				exportToSet.Insert(visibility.Instance(e))
-			}
 			// if vs has exportTo ~ - i.e. not visible to anyone, ignore all exportTos
 			// if vs has exportTo *, make public and ignore all other exportTos
 			// if vs has exportTo ., replace with current namespace
@@ -1804,7 +1845,7 @@ func (ps *PushContext) initVirtualServices(env *Environment) {
 				}
 			} else if !exportToSet.Contains(visibility.None) {
 				// . or other namespaces
-				for exportTo := range exportToSet {
+				for _, exportTo := range exportToSet.StaticNamespacesList() {
 					if exportTo == visibility.Private || string(exportTo) == ns {
 						// add to local namespace only
 						for _, gw := range gwNames {
@@ -2069,16 +2110,18 @@ func (ps *PushContext) setDestinationRules(configs []config.Config) {
 		rule := configs[i].Spec.(*networking.DestinationRule)
 
 		rule.Host = string(ResolveShortnameToFQDN(rule.Host, configs[i].Meta))
-		var exportToSet sets.Set[visibility.Instance]
+		var exportToSet *ExportToTarget
 
 		// destination rules with workloadSelector should not be exported to other namespaces
 		if rule.GetWorkloadSelector() == nil {
-			exportToSet = sets.NewWithLength[visibility.Instance](len(rule.ExportTo))
-			for _, e := range rule.ExportTo {
-				exportToSet.Insert(visibility.Instance(e))
+			var err error
+			exportToSet, err = ParseExportTo(rule.ExportTo, rule.ExportToSelectors)
+			if err != nil {
+				log.Warnf("Failed to parse exportTo for DestinationRule %s/%s: %v", configs[i].Namespace, configs[i].Name, err)
+				exportToSet = &ExportToTarget{StaticNamespaces: sets.New[visibility.Instance]()}
 			}
 		} else {
-			exportToSet = sets.New[visibility.Instance](visibility.Private)
+			exportToSet = &ExportToTarget{StaticNamespaces: sets.New[visibility.Instance](visibility.Private)}
 		}
 
 		// add only if the dest rule is exported with . or * or explicit exportTo containing this namespace

@@ -137,6 +137,101 @@ func ParseExportTo(exportToList []string, exportToSelectors []*typev1beta1.Label
 	return target, nil
 }
 
+// Contains checks if the given visibility instance is in the static namespaces set.
+// This provides backward compatibility with code that used sets.Set[visibility.Instance].Contains().
+func (e *ExportToTarget) Contains(v visibility.Instance) bool {
+	if e == nil {
+		return false
+	}
+	return e.StaticNamespaces.Contains(v)
+}
+
+// Copy creates a deep copy of ExportToTarget.
+// Note: labels.Selector is typically immutable once created, so we can share the selector references.
+func (e *ExportToTarget) Copy() *ExportToTarget {
+	if e == nil {
+		return nil
+	}
+	out := &ExportToTarget{}
+
+	// Preserve nil for StaticNamespaces
+	if e.StaticNamespaces != nil {
+		out.StaticNamespaces = e.StaticNamespaces.Copy()
+	}
+
+	// Preserve nil for Selectors
+	if e.Selectors != nil {
+		out.Selectors = make([]labels.Selector, len(e.Selectors))
+		copy(out.Selectors, e.Selectors)
+	}
+
+	return out
+}
+
+// Equals checks if two ExportToTarget objects are equal.
+// Note: Label selectors are compared by their string representation.
+func (e *ExportToTarget) Equals(other *ExportToTarget) bool {
+	if e == nil && other == nil {
+		return true
+	}
+	if e == nil || other == nil {
+		return false
+	}
+	// Compare static namespaces
+	if !e.StaticNamespaces.Equals(other.StaticNamespaces) {
+		return false
+	}
+	// Compare selectors by count and string representation
+	if len(e.Selectors) != len(other.Selectors) {
+		return false
+	}
+	// Compare each selector's string representation
+	// Note: Order matters for this comparison
+	for i, sel := range e.Selectors {
+		if sel.String() != other.Selectors[i].String() {
+			return false
+		}
+	}
+	return true
+}
+
+// StaticNamespacesList returns the static namespaces as a list for iteration.
+// This is useful for code that needs to iterate over the namespaces.
+func (e *ExportToTarget) StaticNamespacesList() []visibility.Instance {
+	if e == nil {
+		return nil
+	}
+	return e.StaticNamespaces.UnsortedList()
+}
+
+// HasSelectors returns true if there are any label selectors defined.
+func (e *ExportToTarget) HasSelectors() bool {
+	return e != nil && len(e.Selectors) > 0
+}
+
+// IsSuperset checks if this ExportToTarget is a superset of another.
+// For static namespaces, checks set containment.
+// If either has selectors, this is conservatively false (cannot determine superset relationship with dynamic selectors).
+func (e *ExportToTarget) IsSuperset(other *ExportToTarget) bool {
+	if e == nil || other == nil {
+		return false
+	}
+	// If either has selectors, we cannot determine superset relationship
+	if e.HasSelectors() || other.HasSelectors() {
+		return false
+	}
+	// Check if all namespaces in 'other' are in 'e'
+	return e.StaticNamespaces.SupersetOf(other.StaticNamespaces)
+}
+
+// Len returns the number of static namespaces (for backward compatibility).
+func (e *ExportToTarget) Len() int {
+	if e == nil {
+		return 0
+	}
+	return len(e.StaticNamespaces)
+}
+
 // LabelSelectorAsSelector converts a type v1beta1 LabelSelector to a labels.Selector.
 // This follows the same pattern used in the ambient controller.
 func LabelSelectorAsSelector(ps *typev1beta1.LabelSelector) (labels.Selector, error) {

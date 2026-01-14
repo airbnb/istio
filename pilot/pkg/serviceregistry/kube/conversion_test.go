@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"istio.io/api/annotation"
+	"istio.io/istio/pilot/pkg/model"
 	"istio.io/istio/pkg/cluster"
 	"istio.io/istio/pkg/config/kube"
 	"istio.io/istio/pkg/config/protocol"
@@ -296,16 +297,16 @@ func TestServiceConversionWithExportToAnnotation(t *testing.T) {
 
 	tests := []struct {
 		Annotation string
-		Want       sets.Set[visibility.Instance]
+		Want       *model.ExportToTarget
 	}{
-		{"", sets.Set[visibility.Instance]{}},
-		{".", sets.New(visibility.Private)},
-		{"*", sets.New(visibility.Public)},
-		{"~", sets.New(visibility.None)},
-		{"ns", sets.New(visibility.Instance("ns"))},
-		{"ns1,ns2", sets.New(visibility.Instance("ns1"), visibility.Instance("ns2"))},
-		{"ns1, ns2", sets.New(visibility.Instance("ns1"), visibility.Instance("ns2"))},
-		{"ns1 ,ns2", sets.New(visibility.Instance("ns1"), visibility.Instance("ns2"))},
+		{"", &model.ExportToTarget{StaticNamespaces: sets.Set[visibility.Instance]{}}},
+		{".", &model.ExportToTarget{StaticNamespaces: sets.New(visibility.Private)}},
+		{"*", &model.ExportToTarget{StaticNamespaces: sets.New(visibility.Public)}},
+		{"~", &model.ExportToTarget{StaticNamespaces: sets.New(visibility.None)}},
+		{"ns", &model.ExportToTarget{StaticNamespaces: sets.New(visibility.Instance("ns"))}},
+		{"ns1,ns2", &model.ExportToTarget{StaticNamespaces: sets.New(visibility.Instance("ns1"), visibility.Instance("ns2"))}},
+		{"ns1, ns2", &model.ExportToTarget{StaticNamespaces: sets.New(visibility.Instance("ns1"), visibility.Instance("ns2"))}},
+		{"ns1 ,ns2", &model.ExportToTarget{StaticNamespaces: sets.New(visibility.Instance("ns1"), visibility.Instance("ns2"))}},
 	}
 	for _, test := range tests {
 		localSvc.Annotations[annotation.NetworkingExportTo.Name] = test.Annotation

@@ -27,6 +27,7 @@ import (
 	"istio.io/api/label"
 	meshConfig "istio.io/api/mesh/v1alpha1"
 	networking "istio.io/api/networking/v1alpha3"
+	"istio.io/api/type/v1beta1"
 	networkingclient "istio.io/client-go/pkg/apis/networking/v1"
 	"istio.io/istio/pilot/pkg/model"
 	"istio.io/istio/pkg/config/constants"
@@ -1321,8 +1322,8 @@ func TestMatchServiceScope(t *testing.T) {
 				MeshConfig: &meshConfig.MeshConfig{
 					ServiceScopeConfigs: []*meshConfig.MeshConfig_ServiceScopeConfigs{
 						{
-							ServicesSelector: &meshConfig.LabelSelector{
-								MatchExpressions: []*meshConfig.LabelSelectorRequirement{
+							ServicesSelector: &v1beta1.LabelSelector{
+								MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 									{
 										Key:      "istio.io/global",
 										Operator: string(metav1.LabelSelectorOpIn),
@@ -1354,8 +1355,8 @@ func TestMatchServiceScope(t *testing.T) {
 				MeshConfig: &meshConfig.MeshConfig{
 					ServiceScopeConfigs: []*meshConfig.MeshConfig_ServiceScopeConfigs{
 						{
-							NamespaceSelector: &meshConfig.LabelSelector{
-								MatchExpressions: []*meshConfig.LabelSelectorRequirement{
+							NamespaceSelector: &v1beta1.LabelSelector{
+								MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 									{
 										Key:      "istio.io/local",
 										Operator: string(metav1.LabelSelectorOpDoesNotExist),
@@ -1386,7 +1387,7 @@ func TestMatchServiceScope(t *testing.T) {
 				MeshConfig: &meshConfig.MeshConfig{
 					ServiceScopeConfigs: []*meshConfig.MeshConfig_ServiceScopeConfigs{
 						{
-							NamespaceSelector: &meshConfig.LabelSelector{
+							NamespaceSelector: &v1beta1.LabelSelector{
 								MatchLabels: map[string]string{
 									"istio.io/global": "true",
 								},
@@ -1408,7 +1409,7 @@ func TestMatchServiceScope(t *testing.T) {
 				MeshConfig: &meshConfig.MeshConfig{
 					ServiceScopeConfigs: []*meshConfig.MeshConfig_ServiceScopeConfigs{
 						{
-							ServicesSelector: &meshConfig.LabelSelector{
+							ServicesSelector: &v1beta1.LabelSelector{
 								MatchLabels: map[string]string{
 									"istio.io/global": "true",
 								},
@@ -1430,8 +1431,8 @@ func TestMatchServiceScope(t *testing.T) {
 				MeshConfig: &meshConfig.MeshConfig{
 					ServiceScopeConfigs: []*meshConfig.MeshConfig_ServiceScopeConfigs{
 						{
-							NamespaceSelector: &meshConfig.LabelSelector{
-								MatchExpressions: []*meshConfig.LabelSelectorRequirement{
+							NamespaceSelector: &v1beta1.LabelSelector{
+								MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 									{
 										Key:      "istio.io/local",
 										Operator: string(metav1.LabelSelectorOpDoesNotExist),
@@ -1462,7 +1463,7 @@ func TestMatchServiceScope(t *testing.T) {
 				MeshConfig: &meshConfig.MeshConfig{
 					ServiceScopeConfigs: []*meshConfig.MeshConfig_ServiceScopeConfigs{
 						{
-							NamespaceSelector: &meshConfig.LabelSelector{
+							NamespaceSelector: &v1beta1.LabelSelector{
 								MatchLabels: map[string]string{
 									"istio.io/global": "true",
 								},
@@ -1491,12 +1492,12 @@ func TestMatchServiceScope(t *testing.T) {
 				MeshConfig: &meshConfig.MeshConfig{
 					ServiceScopeConfigs: []*meshConfig.MeshConfig_ServiceScopeConfigs{
 						{
-							NamespaceSelector: &meshConfig.LabelSelector{
+							NamespaceSelector: &v1beta1.LabelSelector{
 								MatchLabels: map[string]string{
 									"istio.io/global": "true",
 								},
 							},
-							ServicesSelector: &meshConfig.LabelSelector{
+							ServicesSelector: &v1beta1.LabelSelector{
 								MatchLabels: map[string]string{
 									"istio.io/global": "true",
 								},
@@ -1518,7 +1519,7 @@ func TestMatchServiceScope(t *testing.T) {
 				MeshConfig: &meshConfig.MeshConfig{
 					ServiceScopeConfigs: []*meshConfig.MeshConfig_ServiceScopeConfigs{
 						{
-							ServicesSelector: &meshConfig.LabelSelector{
+							ServicesSelector: &v1beta1.LabelSelector{
 								MatchLabels: map[string]string{
 									"istio.io/global": "true",
 								},
@@ -1547,16 +1548,16 @@ func TestMatchServiceScope(t *testing.T) {
 				MeshConfig: &meshConfig.MeshConfig{
 					ServiceScopeConfigs: []*meshConfig.MeshConfig_ServiceScopeConfigs{
 						{
-							NamespaceSelector: &meshConfig.LabelSelector{
-								MatchExpressions: []*meshConfig.LabelSelectorRequirement{
+							NamespaceSelector: &v1beta1.LabelSelector{
+								MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 									{
 										Key:      "istio.io/local",
 										Operator: string(metav1.LabelSelectorOpDoesNotExist),
 									},
 								},
 							},
-							ServicesSelector: &meshConfig.LabelSelector{
-								MatchExpressions: []*meshConfig.LabelSelectorRequirement{
+							ServicesSelector: &v1beta1.LabelSelector{
+								MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 									{
 										Key:      "istio.io/local",
 										Operator: string(metav1.LabelSelectorOpDoesNotExist),
@@ -1580,16 +1581,16 @@ func TestMatchServiceScope(t *testing.T) {
 				MeshConfig: &meshConfig.MeshConfig{
 					ServiceScopeConfigs: []*meshConfig.MeshConfig_ServiceScopeConfigs{
 						{
-							NamespaceSelector: &meshConfig.LabelSelector{
-								MatchExpressions: []*meshConfig.LabelSelectorRequirement{
+							NamespaceSelector: &v1beta1.LabelSelector{
+								MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 									{
 										Key:      "istio.io/local",
 										Operator: string(metav1.LabelSelectorOpDoesNotExist),
 									},
 								},
 							},
-							ServicesSelector: &meshConfig.LabelSelector{
-								MatchExpressions: []*meshConfig.LabelSelectorRequirement{
+							ServicesSelector: &v1beta1.LabelSelector{
+								MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 									{
 										Key:      "istio.io/local",
 										Operator: string(metav1.LabelSelectorOpDoesNotExist),
@@ -1613,16 +1614,16 @@ func TestMatchServiceScope(t *testing.T) {
 				MeshConfig: &meshConfig.MeshConfig{
 					ServiceScopeConfigs: []*meshConfig.MeshConfig_ServiceScopeConfigs{
 						{
-							NamespaceSelector: &meshConfig.LabelSelector{
-								MatchExpressions: []*meshConfig.LabelSelectorRequirement{
+							NamespaceSelector: &v1beta1.LabelSelector{
+								MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 									{
 										Key:      "istio.io/local",
 										Operator: string(metav1.LabelSelectorOpDoesNotExist),
 									},
 								},
 							},
-							ServicesSelector: &meshConfig.LabelSelector{
-								MatchExpressions: []*meshConfig.LabelSelectorRequirement{
+							ServicesSelector: &v1beta1.LabelSelector{
+								MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 									{
 										Key:      "istio.io/local",
 										Operator: string(metav1.LabelSelectorOpDoesNotExist),
@@ -1653,8 +1654,8 @@ func TestMatchServiceScope(t *testing.T) {
 				MeshConfig: &meshConfig.MeshConfig{
 					ServiceScopeConfigs: []*meshConfig.MeshConfig_ServiceScopeConfigs{
 						{
-							NamespaceSelector: &meshConfig.LabelSelector{
-								MatchExpressions: []*meshConfig.LabelSelectorRequirement{
+							NamespaceSelector: &v1beta1.LabelSelector{
+								MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 									{
 										Key:      "istio.io/global",
 										Operator: string(metav1.LabelSelectorOpIn),
@@ -1662,8 +1663,8 @@ func TestMatchServiceScope(t *testing.T) {
 									},
 								},
 							},
-							ServicesSelector: &meshConfig.LabelSelector{
-								MatchExpressions: []*meshConfig.LabelSelectorRequirement{
+							ServicesSelector: &v1beta1.LabelSelector{
+								MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 									{
 										Key:      "istio.io/local",
 										Operator: string(metav1.LabelSelectorOpDoesNotExist),

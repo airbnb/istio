@@ -2298,8 +2298,8 @@ func newAmbientTestServerWithFlags(t *testing.T, clusterID cluster.ID, networkID
 		o.ClientBuilder = testingBuildClientsFromConfig(t)
 		o.MeshConfig.Mesh().ServiceScopeConfigs = []*v1alpha1.MeshConfig_ServiceScopeConfigs{
 			{
-				ServicesSelector: &v1alpha1.LabelSelector{
-					MatchExpressions: []*v1alpha1.LabelSelectorRequirement{
+				ServicesSelector: &v1beta1.LabelSelector{
+					MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 						{
 							Key:      "istio.io/global",
 							Operator: "Exists",
@@ -2309,8 +2309,8 @@ func newAmbientTestServerWithFlags(t *testing.T, clusterID cluster.ID, networkID
 				Scope: v1alpha1.MeshConfig_ServiceScopeConfigs_GLOBAL,
 			},
 			{
-				NamespaceSelector: &v1alpha1.LabelSelector{
-					MatchExpressions: []*v1alpha1.LabelSelectorRequirement{
+				NamespaceSelector: &v1beta1.LabelSelector{
+					MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 						{
 							Key:      "istio.io/global",
 							Operator: "Exists",

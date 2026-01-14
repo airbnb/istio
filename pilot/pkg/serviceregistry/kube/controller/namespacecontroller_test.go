@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	meshconfig "istio.io/api/mesh/v1alpha1"
+	v1beta1 "istio.io/api/type/v1beta1"
 	"istio.io/istio/pilot/pkg/keycertbundle"
 	"istio.io/istio/pkg/config/constants"
 	"istio.io/istio/pkg/config/mesh/meshwatcher"
@@ -142,14 +143,14 @@ func TestNamespaceControllerWithDiscoverySelectors(t *testing.T) {
 	caBundle := []byte("caBundle")
 	watcher.SetAndNotify(nil, nil, caBundle)
 	meshWatcher := meshwatcher.NewTestWatcher(&meshconfig.MeshConfig{
-		DiscoverySelectors: []*meshconfig.LabelSelector{
+		DiscoverySelectors: []*v1beta1.LabelSelector{
 			{
 				MatchLabels: map[string]string{
 					"discovery-selectors": "enabled",
 				},
 			},
 			{
-				MatchExpressions: []*meshconfig.LabelSelectorRequirement{
+				MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 					{
 						Key:      "istio-tag",
 						Operator: string(metav1.LabelSelectorOpNotIn),
@@ -225,7 +226,7 @@ func TestNamespaceControllerDiscovery(t *testing.T) {
 	caBundle := []byte("caBundle")
 	watcher.SetAndNotify(nil, nil, caBundle)
 	meshWatcher := meshwatcher.NewTestWatcher(&meshconfig.MeshConfig{
-		DiscoverySelectors: []*meshconfig.LabelSelector{{
+		DiscoverySelectors: []*v1beta1.LabelSelector{{
 			MatchLabels: map[string]string{"kubernetes.io/metadata.name": "selected"},
 		}},
 	})
@@ -251,7 +252,7 @@ func TestNamespaceControllerDiscovery(t *testing.T) {
 	expectConfigMapNotExist(t, nc.configmaps, "not-selected")
 
 	meshWatcher.Set(&meshconfig.MeshConfig{
-		DiscoverySelectors: []*meshconfig.LabelSelector{{
+		DiscoverySelectors: []*v1beta1.LabelSelector{{
 			MatchLabels: map[string]string{"kubernetes.io/metadata.name": "not-selected"},
 		}},
 	})

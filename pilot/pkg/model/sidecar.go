@@ -983,7 +983,12 @@ func canMergeServices(s1, s2 *Service) bool {
 		return false
 	}
 
-	if !maps.Equal(s1.Attributes.ExportTo, s2.Attributes.ExportTo) {
+	if s1.Attributes.ExportTo != nil && s2.Attributes.ExportTo != nil {
+		if !s1.Attributes.ExportTo.Equals(s2.Attributes.ExportTo) {
+			return false
+		}
+	} else if s1.Attributes.ExportTo != s2.Attributes.ExportTo {
+		// One is nil and the other is not
 		return false
 	}
 

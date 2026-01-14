@@ -35,6 +35,7 @@ import (
 	"istio.io/api/annotation"
 	"istio.io/api/label"
 	meshconfig "istio.io/api/mesh/v1alpha1"
+	v1beta1 "istio.io/api/type/v1beta1"
 	clientnetworking "istio.io/client-go/pkg/apis/networking/v1"
 	"istio.io/istio/pilot/pkg/features"
 	"istio.io/istio/pilot/pkg/model"
@@ -1112,14 +1113,14 @@ func TestController_Service(t *testing.T) {
 
 func TestController_ServiceWithFixedDiscoveryNamespaces(t *testing.T) {
 	meshWatcher := meshwatcher.NewTestWatcher(&meshconfig.MeshConfig{
-		DiscoverySelectors: []*meshconfig.LabelSelector{
+		DiscoverySelectors: []*v1beta1.LabelSelector{
 			{
 				MatchLabels: map[string]string{
 					"pilot-discovery": "enabled",
 				},
 			},
 			{
-				MatchExpressions: []*meshconfig.LabelSelectorRequirement{
+				MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 					{
 						Key:      "env",
 						Operator: string(metav1.LabelSelectorOpIn),
@@ -1337,7 +1338,7 @@ func TestController_ServiceWithChangingDiscoveryNamespaces(t *testing.T) {
 	// restrict namespaces to nsA (expect 2 delete events for svc3 and svc4)
 	updateMeshConfig(
 		&meshconfig.MeshConfig{
-			DiscoverySelectors: []*meshconfig.LabelSelector{
+			DiscoverySelectors: []*v1beta1.LabelSelector{
 				{
 					MatchLabels: map[string]string{
 						"app": "foo",
@@ -1355,7 +1356,7 @@ func TestController_ServiceWithChangingDiscoveryNamespaces(t *testing.T) {
 	// restrict namespaces to nsB (1 create event should trigger for nsB service and 2 delete events for nsA services)
 	updateMeshConfig(
 		&meshconfig.MeshConfig{
-			DiscoverySelectors: []*meshconfig.LabelSelector{
+			DiscoverySelectors: []*v1beta1.LabelSelector{
 				{
 					MatchLabels: map[string]string{
 						"app": "bar",
@@ -1373,9 +1374,9 @@ func TestController_ServiceWithChangingDiscoveryNamespaces(t *testing.T) {
 	// expand namespaces to nsA and nsB with selectors (2 create events should trigger for nsA services)
 	updateMeshConfig(
 		&meshconfig.MeshConfig{
-			DiscoverySelectors: []*meshconfig.LabelSelector{
+			DiscoverySelectors: []*v1beta1.LabelSelector{
 				{
-					MatchExpressions: []*meshconfig.LabelSelectorRequirement{
+					MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 						{
 							Key:      "app",
 							Operator: string(metav1.LabelSelectorOpIn),
@@ -1395,7 +1396,7 @@ func TestController_ServiceWithChangingDiscoveryNamespaces(t *testing.T) {
 	// permit all discovery namespaces by omitting discovery selectors (1 create event should trigger for the nsC service)
 	updateMeshConfig(
 		&meshconfig.MeshConfig{
-			DiscoverySelectors: []*meshconfig.LabelSelector{},
+			DiscoverySelectors: []*v1beta1.LabelSelector{},
 		},
 		[]*model.Service{svc1, svc2, svc3, svc4},
 		1,
@@ -1523,7 +1524,7 @@ func TestControllerResourceScoping(t *testing.T) {
 	// restrict namespaces to nsA (expect 2 delete events for svc3 and svc4)
 	updateMeshConfig(
 		&meshconfig.MeshConfig{
-			DiscoverySelectors: []*meshconfig.LabelSelector{
+			DiscoverySelectors: []*v1beta1.LabelSelector{
 				{
 					MatchLabels: map[string]string{
 						"app": "foo",
@@ -1550,9 +1551,9 @@ func TestControllerResourceScoping(t *testing.T) {
 	// expand namespaces to nsA and nsB with selectors (expect events svc3 and a full push event for nsB selected)
 	updateMeshConfig(
 		&meshconfig.MeshConfig{
-			DiscoverySelectors: []*meshconfig.LabelSelector{
+			DiscoverySelectors: []*v1beta1.LabelSelector{
 				{
-					MatchExpressions: []*meshconfig.LabelSelectorRequirement{
+					MatchExpressions: []*v1beta1.LabelSelectorRequirement{
 						{
 							Key:      "app",
 							Operator: string(metav1.LabelSelectorOpIn),
@@ -2737,7 +2738,9 @@ func TestServiceUpdateNeedsPush(t *testing.T) {
 	newService := func(exportTo visibility.Instance, ports []int) *model.Service {
 		s := &model.Service{
 			Attributes: model.ServiceAttributes{
-				ExportTo: sets.New(exportTo),
+				ExportTo: &model.ExportToTarget{
+					StaticNamespaces: sets.New(exportTo),
+				},
 			},
 		}
 		for _, port := range ports {

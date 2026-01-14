@@ -31,13 +31,11 @@ import (
 	"istio.io/istio/pkg/config/host"
 	"istio.io/istio/pkg/config/protocol"
 	"istio.io/istio/pkg/config/schema/gvk"
-	"istio.io/istio/pkg/config/visibility"
 	"istio.io/istio/pkg/kube/labels"
 	pm "istio.io/istio/pkg/model"
 	"istio.io/istio/pkg/network"
 	"istio.io/istio/pkg/spiffe"
 	netutil "istio.io/istio/pkg/util/net"
-	"istio.io/istio/pkg/util/sets"
 )
 
 func convertPort(port *networking.ServicePort) *model.Port {
@@ -94,9 +92,13 @@ func ServiceToServiceEntry(svc *model.Service, proxy *model.Proxy) *config.Confi
 	}
 
 	// Based on networking.istio.io/exportTo annotation
-	for k := range svc.Attributes.ExportTo {
-		// k is Private or Public
-		se.ExportTo = append(se.ExportTo, string(k))
+	if svc.Attributes.ExportTo != nil {
+		for _, k := range svc.Attributes.ExportTo.StaticNamespacesList() {
+			// k is Private or Public
+			se.ExportTo = append(se.ExportTo, string(k))
+		}
+		// Note: exportToSelectors are not currently converted back to ServiceEntry
+		// as this reverse conversion is typically used for debugging/display purposes only
 	}
 
 	if svc.MeshExternal {
@@ -197,12 +199,12 @@ func convertServices(cfg config.Config) []*model.Service {
 		}
 	}
 
-	var exportTo sets.Set[visibility.Instance]
-	if len(serviceEntry.ExportTo) > 0 {
-		exportTo = sets.NewWithLength[visibility.Instance](len(serviceEntry.ExportTo))
-		for _, e := range serviceEntry.ExportTo {
-			exportTo.Insert(visibility.Instance(e))
-		}
+	// Parse exportTo and exportToSelectors into ExportToTarget
+	exportTo, err := model.ParseExportTo(serviceEntry.ExportTo, serviceEntry.ExportToSelectors)
+	if err != nil {
+		// Log error but continue with empty export target
+		log.Warnf("Failed to parse exportTo for ServiceEntry %s/%s: %v", cfg.Namespace, cfg.Name, err)
+		exportTo = nil
 	}
 
 	var labelSelectors map[string]string
