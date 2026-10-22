@@ -215,3 +215,35 @@ func Test_KubeSecretController_ExternalIstiod_MultipleClusters(t *testing.T) {
 	// Test - Verify that the remote controller has been removed.
 	verifyControllers(t, mc, 1, "delete remote controller 2")
 }
+
+// Racing credential updates can call Close twice on the same kubeController;
+// the second call used to panic with "close of closed channel".
+func TestKubeControllerCloseIdempotent(t *testing.T) {
+	clusterID := cluster.ID("remote-cluster")
+	client := kube.NewFakeClient()
+	registry := NewController(client, Options{
+		ClusterID:    clusterID,
+		DomainSuffix: DomainSuffix,
+		MeshWatcher:  meshwatcher.NewTestWatcher(&meshconfig.MeshConfig{}),
+		// Added to better simulate a real environment and keep the goroutine leak test honest
+		MeshNetworksWatcher: meshwatcher.NewFixedNetworksWatcher(nil),
+	})
+	kc := &kubeController{
+		MeshServiceController: newMockserviceController(clusterID),
+		Controller:            registry,
+		stop:                  make(chan struct{}),
+	}
+	// Run the registry so Close can drain its queue, as it would in production.
+	client.RunAndWait(kc.stop)
+	go registry.Run(kc.stop)
+	kube.WaitForCacheSync("test", kc.stop, registry.HasSynced)
+
+	kc.Close()
+	kc.Close()
+
+	select {
+	case <-kc.stop:
+	default:
+		t.Fatal("expected stop channel to be closed")
+	}
+}
